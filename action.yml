@@ -1,0 +1,326 @@
+name: "Devsy Action"
+description: "GitHub Action for automated PR generation, updates, and plan creation using Claude Code"
+author: "Devsy"
+branding:
+  icon: "code"
+  color: "purple"
+
+inputs:
+  # === Claude Base Action Configuration ===
+  anthropic_api_key:
+    description: "Anthropic API key for Claude"
+    required: true
+  model:
+    description: "Claude model to use"
+    required: false
+    default: "sonnet"
+  custom_instructions:
+    description: "Additional instructions for Claude"
+    required: false
+    default: ""
+  allowed_tools:
+    description: "Additional tools for Claude to use (base tools are always included)"
+    required: false
+    default: ""
+  disallowed_tools:
+    description: "Tools that Claude should never use"
+    required: false
+    default: ""
+  use_bedrock:
+    description: "Use AWS Bedrock for authentication"
+    required: false
+    default: "false"
+  use_vertex:
+    description: "Use Google Vertex for authentication"
+    required: false
+    default: "false"
+  max_turns:
+    description: "Maximum number of conversation turns for Claude"
+    required: false
+    default: "200"
+
+  # === Devsy Action Configuration ===
+  mode:
+    description: "Action mode: pr-gen, pr-update, or plan-gen"
+    required: true
+  pr_number:
+    description: "PR number to update (for pr-update mode)"
+    required: false
+  prompt:
+    description: "The prompt to send to Claude Code (required for pr-gen and plan-gen modes)"
+    required: false
+    default: ""
+  prompt_file:
+    description: "Path to a file containing the prompt"
+    required: false
+    default: ""
+  base_branch:
+    description: "Base branch for creating new branches"
+    required: false
+    default: "main"
+
+  # === GitHub Token Configuration ===
+  backend_url:
+    description: "Devsy backend URL for token exchange"
+    required: false
+    default: "https://devsy.ai"
+
+  # === Callback Configuration ===
+  callback_url:
+    description: "URL to POST completion status and results"
+    required: false
+    default: ""
+  callback_auth_token:
+    description: "Bearer token for callback authentication"
+    required: false
+    default: ""
+  callback_auth_header:
+    description: "Custom auth header name (default: Authorization)"
+    required: false
+    default: "Authorization"
+
+outputs:
+  conclusion:
+    description: "Execution status of the action"
+    value: ${{ steps.run_claude.outputs.conclusion }}
+  execution_file:
+    description: "Path to the execution log file"
+    value: ${{ steps.run_claude.outputs.execution_file }}
+  pr_number:
+    description: "PR number (for pr-gen and pr-update modes)"
+    value: ${{ steps.extract_outputs.outputs.pr_number }}
+  pr_url:
+    description: "PR URL (for pr-gen and pr-update modes)"
+    value: ${{ steps.extract_outputs.outputs.pr_url }}
+  plan_output:
+    description: "Plan content (for plan-gen mode)"
+    value: ${{ steps.extract_outputs.outputs.plan_output }}
+  token_source:
+    description: "Authentication method used (devsy-bot or github-actions-bot)"
+    value: ${{ steps.token_exchange.outputs.token_source }}
+
+runs:
+  using: "composite"
+  steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+
+    - name: Setup Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.11'
+
+    - name: Install action requirements
+      shell: bash
+      run: |
+        echo "Creating isolated environment for Devsy Action"
+        python -m venv /tmp/devsy-action-env
+        source /tmp/devsy-action-env/bin/activate
+        pip install -r "${{ github.action_path }}/requirements.txt"
+
+    - name: Configure Git identity
+      shell: bash
+      run: |
+        git config --global user.email "no-reply@devsy.ai"
+        git config --global user.name "Devsy Bot"
+
+    - name: Validate inputs
+      shell: bash
+      run: |
+        # Validate mode
+        if [[ "${{ inputs.mode }}" != "pr-gen" && "${{ inputs.mode }}" != "pr-update" && "${{ inputs.mode }}" != "plan-gen" ]]; then
+          echo "Error: Invalid mode '${{ inputs.mode }}'. Must be one of: pr-gen, pr-update, plan-gen"
+          exit 1
+        fi
+
+        # Validate authentication
+        if [[ -z "${{ inputs.anthropic_api_key }}" && "${{ inputs.use_bedrock }}" != "true" && "${{ inputs.use_vertex }}" != "true" ]]; then
+          echo "Error: Authentication required. Please provide one of:"
+          echo "  - anthropic_api_key: Set up ANTHROPIC_API_KEY in repository secrets"
+          echo "  - use_bedrock: true (with appropriate AWS credentials)"
+          echo "  - use_vertex: true (with appropriate GCP credentials)"
+          echo ""
+          echo "To set up ANTHROPIC_API_KEY:"
+          echo "  1. Go to your repository Settings > Secrets and variables > Actions"
+          echo "  2. Click 'New repository secret'"
+          echo "  3. Name: ANTHROPIC_API_KEY"
+          echo "  4. Value: Your Anthropic API key from console.anthropic.com"
+          exit 1
+        fi
+
+        # Validate mode-specific requirements
+        if [[ "${{ inputs.mode }}" == "pr-gen" && -z "${{ inputs.prompt }}" && -z "${{ inputs.prompt_file }}" ]]; then
+          echo "Error: prompt or prompt_file is required for pr-gen mode"
+          exit 1
+        fi
+
+        if [[ "${{ inputs.mode }}" == "pr-update" && -z "${{ inputs.pr_number }}" ]]; then
+          echo "Error: pr_number is required for pr-update mode"
+          exit 1
+        fi
+
+    - name: Prepare prompt
+      id: prepare_prompt
+      shell: bash
+      run: |
+        # Set up the prompt based on mode
+        args=(
+          "--mode" "${{ inputs.mode }}"
+          "--prompt" "${{ inputs.prompt }}"
+          "--prompt-file" "${{ inputs.prompt_file }}"
+          "--custom-instructions" "${{ inputs.custom_instructions }}"
+          "--github-token" "${{ github.token }}"
+          "--repo" "${{ github.repository }}"
+          "--base-branch" "${{ inputs.base_branch }}"
+        )
+
+        # Only add pr-number if it's not empty
+        if [[ -n "${{ inputs.pr_number }}" ]]; then
+          args+=("--pr-number" "${{ inputs.pr_number }}")
+        fi
+
+        /tmp/devsy-action-env/bin/python ${{ github.action_path }}/scripts/prepare_prompt.py "${args[@]}"
+
+    - name: Exchange for devsy-bot GitHub App token
+      id: token_exchange
+      shell: bash
+      env:
+        GITHUB_TOKEN: ${{ github.token }}
+        GITHUB_REPOSITORY: ${{ github.repository }}
+        DEVSY_BACKEND_URL: ${{ inputs.backend_url }}
+      run: |
+        echo "🔄 Attempting to exchange GitHub Actions token for devsy-bot token..."
+
+        # Run the Python token exchange script and capture output
+        TOKEN_EXCHANGE_OUTPUT=$(/tmp/devsy-action-env/bin/python ${{ github.action_path }}/scripts/github_token_exchange.py 2>&1)
+        TOKEN_EXCHANGE_EXIT_CODE=$?
+
+        echo "$TOKEN_EXCHANGE_OUTPUT"
+
+        if [ $TOKEN_EXCHANGE_EXIT_CODE -eq 0 ]; then
+          # Check which token source was used
+          if echo "$TOKEN_EXCHANGE_OUTPUT" | grep -q "Successfully exchanged token for devsy-bot"; then
+            echo "token_source=devsy-bot" >> $GITHUB_OUTPUT
+          else
+            echo "token_source=github-actions-bot" >> $GITHUB_OUTPUT
+          fi
+        else
+          echo "⚠️  Token exchange script failed, using default GitHub token"
+          echo "github_token=${{ github.token }}" >> $GITHUB_OUTPUT
+          echo "token_source=github-actions-bot" >> $GITHUB_OUTPUT
+        fi
+
+    - name: Prepare tool configuration
+      id: prepare_tools
+      shell: bash
+      run: |
+        # Define base tools that are always included
+        BASE_TOOLS="Edit,Read,Write,Glob,Grep,LS,Bash(git:*),Bash(rg:*),Bash(cat:*),Bash(rm:*),Task,TodoWrite,TodoRead,mcp__github__create_pull_request,mcp__github__create_branch,mcp__github__get_pull_request,mcp__github__list_pull_requests,mcp__github__get_pull_request_files,mcp__github__add_issue_comment"
+
+        # Combine base tools with additional allowed tools
+        if [[ -n "${{ inputs.allowed_tools }}" ]]; then
+          FINAL_ALLOWED_TOOLS="${BASE_TOOLS},${{ inputs.allowed_tools }}"
+        else
+          FINAL_ALLOWED_TOOLS="${BASE_TOOLS}"
+        fi
+
+        echo "allowed_tools=${FINAL_ALLOWED_TOOLS}" >> $GITHUB_OUTPUT
+        echo "disallowed_tools=${{ inputs.disallowed_tools }}" >> $GITHUB_OUTPUT
+
+    - name: Run Claude Code with GitHub MCP
+      id: run_claude
+      uses: anthropics/claude-code-base-action@main
+      with:
+        prompt: ${{ steps.prepare_prompt.outputs.user_prompt }}
+        system_prompt: ${{ steps.prepare_prompt.outputs.system_prompt }}
+        anthropic_api_key: ${{ inputs.anthropic_api_key }}
+        model: ${{ inputs.model }}
+        max_turns: ${{ inputs.max_turns }}
+        allowed_tools: ${{ steps.prepare_tools.outputs.allowed_tools }}
+        disallowed_tools: ${{ steps.prepare_tools.outputs.disallowed_tools }}
+        use_bedrock: ${{ inputs.use_bedrock }}
+        use_vertex: ${{ inputs.use_vertex }}
+        mcp_config: |
+          {
+            "mcpServers": {
+              "github": {
+                "command": "npx",
+                "args": ["-y", "@modelcontextprotocol/server-github"],
+                "env": {
+                  "GITHUB_PERSONAL_ACCESS_TOKEN": "${{ steps.token_exchange.outputs.github_token }}"
+                }
+              }
+            }
+          }
+      env:
+        # AWS Bedrock configuration (when use_bedrock is true)
+        AWS_REGION: ${{ env.AWS_REGION }}
+        AWS_ACCESS_KEY_ID: ${{ env.AWS_ACCESS_KEY_ID }}
+        AWS_SECRET_ACCESS_KEY: ${{ env.AWS_SECRET_ACCESS_KEY }}
+        AWS_SESSION_TOKEN: ${{ env.AWS_SESSION_TOKEN }}
+
+        # Google Vertex AI configuration (when use_vertex is true)
+        ANTHROPIC_VERTEX_PROJECT_ID: ${{ env.ANTHROPIC_VERTEX_PROJECT_ID }}
+        CLOUD_ML_REGION: ${{ env.CLOUD_ML_REGION }}
+        GOOGLE_APPLICATION_CREDENTIALS: ${{ env.GOOGLE_APPLICATION_CREDENTIALS }}
+
+    - name: Extract outputs from execution
+      id: extract_outputs
+      shell: bash
+      run: |
+        /tmp/devsy-action-env/bin/python ${{ github.action_path }}/scripts/extract_outputs.py \
+          --execution-file "${{ steps.run_claude.outputs.execution_file }}" \
+          --mode "${{ inputs.mode }}"
+
+    - name: Send callback notification
+      if: inputs.callback_url != ''
+      shell: bash
+      run: |
+        # Prepare callback data
+        callback_data=$(jq -n \
+          --arg run_id "${{ github.run_id }}" \
+          --arg run_url "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}" \
+          --arg mode "${{ inputs.mode }}" \
+          --arg conclusion "${{ steps.run_claude.outputs.conclusion }}" \
+          --arg pr_number "${{ steps.extract_outputs.outputs.pr_number }}" \
+          --arg pr_url "${{ steps.extract_outputs.outputs.pr_url }}" \
+          --arg plan_output "${{ steps.extract_outputs.outputs.plan_output }}" \
+          --arg execution_file "${{ steps.run_claude.outputs.execution_file }}" \
+          --arg token_source "${{ steps.token_exchange.outputs.token_source }}" \
+          '{
+            run_id: $run_id,
+            run_url: $run_url,
+            mode: $mode,
+            conclusion: $conclusion,
+            pr_number: ($pr_number | if . == "" then null else . end),
+            pr_url: ($pr_url | if . == "" then null else . end),
+            plan_output: ($plan_output | if . == "" then null else . end),
+            execution_file: $execution_file,
+            token_source: $token_source,
+            timestamp: now | strftime("%Y-%m-%dT%H:%M:%SZ")
+          }')
+
+        # Prepare callback headers
+        headers=("-H" "Content-Type: application/json")
+        headers+=("-H" "X-GitHub-Run-ID: ${{ github.run_id }}")
+        headers+=("-H" "X-GitHub-Repository: ${{ github.repository }}")
+
+        # Add authentication if token provided
+        if [[ -n "${{ inputs.callback_auth_token }}" ]]; then
+          auth_header="${{ inputs.callback_auth_header }}"
+          if [[ -z "$auth_header" ]]; then
+            auth_header="Authorization"
+          fi
+          headers+=("-H" "$auth_header: Bearer ${{ inputs.callback_auth_token }}")
+          echo "Sending authenticated callback to ${{ inputs.callback_url }}"
+        else
+          echo "Sending callback to ${{ inputs.callback_url }}"
+        fi
+
+        # Send callback
+        curl -X POST "${{ inputs.callback_url }}" \
+          "${headers[@]}" \
+          -d "$callback_data" \
+          || echo "Warning: Failed to send callback (continuing anyway)"
