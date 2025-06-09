@@ -133,37 +133,14 @@ runs:
     - name: Validate inputs
       shell: bash
       run: |
-        # Validate mode
-        if [[ "${{ inputs.mode }}" != "pr-gen" && "${{ inputs.mode }}" != "pr-update" && "${{ inputs.mode }}" != "plan-gen" ]]; then
-          echo "Error: Invalid mode '${{ inputs.mode }}'. Must be one of: pr-gen, pr-update, plan-gen"
-          exit 1
-        fi
-
-        # Validate authentication
-        if [[ -z "${{ inputs.anthropic_api_key }}" && "${{ inputs.use_bedrock }}" != "true" && "${{ inputs.use_vertex }}" != "true" ]]; then
-          echo "Error: Authentication required. Please provide one of:"
-          echo "  - anthropic_api_key: Set up ANTHROPIC_API_KEY in repository secrets"
-          echo "  - use_bedrock: true (with appropriate AWS credentials)"
-          echo "  - use_vertex: true (with appropriate GCP credentials)"
-          echo ""
-          echo "To set up ANTHROPIC_API_KEY:"
-          echo "  1. Go to your repository Settings > Secrets and variables > Actions"
-          echo "  2. Click 'New repository secret'"
-          echo "  3. Name: ANTHROPIC_API_KEY"
-          echo "  4. Value: Your Anthropic API key from console.anthropic.com"
-          exit 1
-        fi
-
-        # Validate mode-specific requirements
-        if [[ "${{ inputs.mode }}" == "pr-gen" && -z "${{ inputs.prompt }}" && -z "${{ inputs.prompt_file }}" ]]; then
-          echo "Error: prompt or prompt_file is required for pr-gen mode"
-          exit 1
-        fi
-
-        if [[ "${{ inputs.mode }}" == "pr-update" && -z "${{ inputs.pr_number }}" ]]; then
-          echo "Error: pr_number is required for pr-update mode"
-          exit 1
-        fi
+        /tmp/devsy-action-env/bin/python ${{ github.action_path }}/src/validate_inputs.py \
+          --mode "${{ inputs.mode }}" \
+          --anthropic-api-key "${{ inputs.anthropic_api_key }}" \
+          --use-bedrock "${{ inputs.use_bedrock }}" \
+          --use-vertex "${{ inputs.use_vertex }}" \
+          --prompt "${{ inputs.prompt }}" \
+          --prompt-file "${{ inputs.prompt_file }}" \
+          --pr-number "${{ inputs.pr_number }}"
 
     - name: Prepare prompt
       id: prepare_prompt
@@ -185,7 +162,7 @@ runs:
           args+=("--pr-number" "${{ inputs.pr_number }}")
         fi
 
-        /tmp/devsy-action-env/bin/python ${{ github.action_path }}/scripts/prepare_prompt.py "${args[@]}"
+        /tmp/devsy-action-env/bin/python ${{ github.action_path }}/src/prepare_prompt.py "${args[@]}"
 
     - name: Exchange for devsy-bot GitHub App token
       id: token_exchange
@@ -198,7 +175,7 @@ runs:
         echo "🔄 Attempting to exchange GitHub Actions token for devsy-bot token..."
 
         # Run the Python token exchange script and capture output
-        TOKEN_EXCHANGE_OUTPUT=$(/tmp/devsy-action-env/bin/python ${{ github.action_path }}/scripts/github_token_exchange.py 2>&1)
+        TOKEN_EXCHANGE_OUTPUT=$(/tmp/devsy-action-env/bin/python ${{ github.action_path }}/src/github_token_exchange.py 2>&1)
         TOKEN_EXCHANGE_EXIT_CODE=$?
 
         echo "$TOKEN_EXCHANGE_OUTPUT"
@@ -220,18 +197,9 @@ runs:
       id: prepare_tools
       shell: bash
       run: |
-        # Define base tools that are always included
-        BASE_TOOLS="Edit,Read,Write,Glob,Grep,LS,Bash(git:*),Bash(rg:*),Bash(cat:*),Bash(rm:*),Task,TodoWrite,TodoRead,mcp__github__create_pull_request,mcp__github__create_branch,mcp__github__get_pull_request,mcp__github__list_pull_requests,mcp__github__get_pull_request_files,mcp__github__add_issue_comment"
-
-        # Combine base tools with additional allowed tools
-        if [[ -n "${{ inputs.allowed_tools }}" ]]; then
-          FINAL_ALLOWED_TOOLS="${BASE_TOOLS},${{ inputs.allowed_tools }}"
-        else
-          FINAL_ALLOWED_TOOLS="${BASE_TOOLS}"
-        fi
-
-        echo "allowed_tools=${FINAL_ALLOWED_TOOLS}" >> $GITHUB_OUTPUT
-        echo "disallowed_tools=${{ inputs.disallowed_tools }}" >> $GITHUB_OUTPUT
+        /tmp/devsy-action-env/bin/python ${{ github.action_path }}/src/prepare_tools.py \
+          --allowed-tools "${{ inputs.allowed_tools }}" \
+          --disallowed-tools "${{ inputs.disallowed_tools }}"
 
     - name: Run Claude Code with GitHub MCP
       id: run_claude
@@ -275,7 +243,7 @@ runs:
       id: extract_outputs
       shell: bash
       run: |
-        /tmp/devsy-action-env/bin/python ${{ github.action_path }}/scripts/extract_outputs.py \
+        /tmp/devsy-action-env/bin/python ${{ github.action_path }}/src/extract_outputs.py \
           --execution-file "${{ steps.run_claude.outputs.execution_file }}" \
           --mode "${{ inputs.mode }}"
 
@@ -283,49 +251,17 @@ runs:
       if: inputs.callback_url != ''
       shell: bash
       run: |
-        # Prepare callback data
-        callback_data=$(jq -n \
-          --arg run_id "${{ github.run_id }}" \
-          --arg run_url "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}" \
-          --arg mode "${{ inputs.mode }}" \
-          --arg conclusion "${{ steps.run_claude.outputs.conclusion }}" \
-          --arg pr_number "${{ steps.extract_outputs.outputs.pr_number }}" \
-          --arg pr_url "${{ steps.extract_outputs.outputs.pr_url }}" \
-          --arg plan_output "${{ steps.extract_outputs.outputs.plan_output }}" \
-          --arg execution_file "${{ steps.run_claude.outputs.execution_file }}" \
-          --arg token_source "${{ steps.token_exchange.outputs.token_source }}" \
-          '{
-            run_id: $run_id,
-            run_url: $run_url,
-            mode: $mode,
-            conclusion: $conclusion,
-            pr_number: ($pr_number | if . == "" then null else . end),
-            pr_url: ($pr_url | if . == "" then null else . end),
-            plan_output: ($plan_output | if . == "" then null else . end),
-            execution_file: $execution_file,
-            token_source: $token_source,
-            timestamp: now | strftime("%Y-%m-%dT%H:%M:%SZ")
-          }')
-
-        # Prepare callback headers
-        headers=("-H" "Content-Type: application/json")
-        headers+=("-H" "X-GitHub-Run-ID: ${{ github.run_id }}")
-        headers+=("-H" "X-GitHub-Repository: ${{ github.repository }}")
-
-        # Add authentication if token provided
-        if [[ -n "${{ inputs.callback_auth_token }}" ]]; then
-          auth_header="${{ inputs.callback_auth_header }}"
-          if [[ -z "$auth_header" ]]; then
-            auth_header="Authorization"
-          fi
-          headers+=("-H" "$auth_header: Bearer ${{ inputs.callback_auth_token }}")
-          echo "Sending authenticated callback to ${{ inputs.callback_url }}"
-        else
-          echo "Sending callback to ${{ inputs.callback_url }}"
-        fi
-
-        # Send callback
-        curl -X POST "${{ inputs.callback_url }}" \
-          "${headers[@]}" \
-          -d "$callback_data" \
-          || echo "Warning: Failed to send callback (continuing anyway)"
+        /tmp/devsy-action-env/bin/python ${{ github.action_path }}/src/send_callback.py \
+          --callback-url "${{ inputs.callback_url }}" \
+          --run-id "${{ github.run_id }}" \
+          --run-url "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}" \
+          --mode "${{ inputs.mode }}" \
+          --conclusion "${{ steps.run_claude.outputs.conclusion }}" \
+          --pr-number "${{ steps.extract_outputs.outputs.pr_number }}" \
+          --pr-url "${{ steps.extract_outputs.outputs.pr_url }}" \
+          --plan-output "${{ steps.extract_outputs.outputs.plan_output }}" \
+          --execution-file "${{ steps.run_claude.outputs.execution_file }}" \
+          --token-source "${{ steps.token_exchange.outputs.token_source }}" \
+          --auth-token "${{ inputs.callback_auth_token }}" \
+          --auth-header "${{ inputs.callback_auth_header }}" \
+          --repository "${{ github.repository }}"
