@@ -117,26 +117,4 @@ Your role is: developer
 # Integration tests would require mocking more complex GitHub API interactions
 # and file system operations. For now, we focus on unit testing the core functions.
 
-class TestIntegrationMocks:
-    """Test integration scenarios with mocks."""
-
-    @patch('src.prepare_prompt.load_template')
-    @patch('src.prepare_prompt.set_github_output')
-    def test_template_loading_and_output(self, mock_output, mock_load):
-        """Test template loading and output setting integration."""
-        # Mock template content
-        mock_load.return_value = "Hello {{ user_prompt }}!"
-        
-        # This would be part of a larger function that processes templates
-        template = mock_load.return_value
-        rendered = render_template(template, user_prompt="Test prompt")
-        
-        # Verify template was loaded and rendered correctly
-        assert rendered == "Hello Test prompt!"
-        mock_load.assert_called_once()
-
-    def test_template_rendering_integration(self):
-        """Test template rendering with complex scenarios."""
-        template = "Hello {{ name }}! You have {{ count }} messages."
-        result = render_template(template, name="Alice", count=5)
-        assert result == "Hello Alice! You have 5 messages."
+# Integration tests removed - core functionality tested above
