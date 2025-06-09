@@ -38,6 +38,10 @@ inputs:
     description: "Maximum number of conversation turns for Claude"
     required: false
     default: "200"
+  timeout_minutes:
+    description: "Timeout in minutes for Claude Code execution"
+    required: false
+    default: "10"
 
   # === Devsy Action Configuration ===
   mode:
@@ -238,6 +242,7 @@ runs:
         anthropic_api_key: ${{ inputs.anthropic_api_key }}
         model: ${{ inputs.model }}
         max_turns: ${{ inputs.max_turns }}
+        timeout_minutes: ${{ inputs.timeout_minutes }}
         allowed_tools: ${{ steps.prepare_tools.outputs.allowed_tools }}
         disallowed_tools: ${{ steps.prepare_tools.outputs.disallowed_tools }}
         use_bedrock: ${{ inputs.use_bedrock }}

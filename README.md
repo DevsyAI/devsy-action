@@ -161,6 +161,7 @@ jobs:
 - `callback_auth_token`: Bearer token for callback authentication
 - `callback_auth_header`: Custom auth header name (default: `Authorization`)
 - `max_turns`: Maximum number of conversation turns for Claude (default: `200`)
+- `timeout_minutes`: Timeout in minutes for Claude Code execution (default: `10`)
 
 ### Tool Configuration
 
