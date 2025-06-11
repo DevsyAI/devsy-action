@@ -86,9 +86,22 @@ def parse_execution_file(file_path):
 
 def extract_plan_content(content):
     """Extract plan content for plan-gen mode."""
-    # For plan generation, return the whole content as the plan
-    # Could be enhanced to extract specific sections if needed
-    return content.strip() if content else ""
+    if not content:
+        return ""
+    
+    # Look for markdown code block containing the plan
+    import re
+    
+    # Pattern to match ```markdown ... ``` blocks
+    pattern = r'```markdown\s*(.*?)\s*```'
+    matches = re.findall(pattern, content, re.DOTALL)
+    
+    if matches:
+        # Return the content from the first markdown block found
+        return matches[0].strip()
+    
+    # Fallback: return the whole content if no markdown block found
+    return content.strip()
 
 
 def main():

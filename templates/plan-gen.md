@@ -60,6 +60,13 @@ project-structure/
 
 {{ custom_instructions }}
 
+## Output Format
+Please provide your complete implementation plan within a markdown code block:
+
+```markdown
+[Your complete implementation plan following the structure above]
+```
+
 ## Quality Standards
 - Be specific and actionable with concrete examples
 - Reference existing codebase patterns where applicable

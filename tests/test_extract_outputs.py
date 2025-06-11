@@ -191,6 +191,55 @@ CREATE TABLE users (id INT, name VARCHAR(255));
         assert "Implementation Plan" in plan
         assert "CREATE TABLE" in plan
         assert "Next Steps" in plan
+    
+    def test_extract_plan_from_markdown_block(self):
+        """Test extracting plan from markdown code block."""
+        text = """
+Here's the implementation plan:
+
+```markdown
+# Task Analysis
+## Objective
+Build a REST API for user management
+
+# Technical Approach
+- Use FastAPI framework
+- PostgreSQL database
+- JWT authentication
+
+# Implementation Roadmap
+1. Setup project structure
+2. Create database models
+3. Implement API endpoints
+```
+
+This plan provides a structured approach.
+        """
+        plan = extract_plan_content(text)
+        assert "# Task Analysis" in plan
+        assert "Build a REST API for user management" in plan
+        assert "# Technical Approach" in plan
+        assert "# Implementation Roadmap" in plan
+        # Should not include text outside the markdown block
+        assert "Here's the implementation plan:" not in plan
+        assert "This plan provides a structured approach." not in plan
+    
+    def test_extract_plan_without_markdown_block(self):
+        """Test fallback when no markdown block is present."""
+        text = """
+# Implementation Plan
+
+## Overview
+This is a simple plan without markdown delimiters.
+
+## Steps
+1. First step
+2. Second step
+        """
+        plan = extract_plan_content(text)
+        # Should return the entire content when no markdown block found
+        assert "# Implementation Plan" in plan
+        assert "This is a simple plan without markdown delimiters." in plan
 
 
 # File parsing and main function integration tests removed - covered by manual testing
