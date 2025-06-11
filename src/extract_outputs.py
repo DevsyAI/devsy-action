@@ -2,6 +2,7 @@
 """Extract outputs from Claude's execution results for GitHub Actions."""
 
 import argparse
+import base64
 import json
 import os
 import re
@@ -134,12 +135,13 @@ def main():
             f.write(f"pr_number={outputs.get('pr_number', '')}\n")
             f.write(f"pr_url={outputs.get('pr_url', '')}\n")
             
-            # Use multiline delimiter for plan_output to avoid shell parsing issues
+            # Base64 encode plan_output to avoid shell parsing issues
             plan_output = outputs.get('plan_output', '')
-            delimiter = "EOF_PLAN_OUTPUT"
-            f.write(f"plan_output<<{delimiter}\n")
-            f.write(f"{plan_output}\n")
-            f.write(f"{delimiter}\n")
+            if plan_output:
+                plan_output_b64 = base64.b64encode(plan_output.encode('utf-8')).decode('ascii')
+                f.write(f"plan_output={plan_output_b64}\n")
+            else:
+                f.write(f"plan_output=\n")
 
             # Debug info (not used as outputs but helpful for troubleshooting)
             f.write(f"branch_names={json.dumps(outputs.get('branch_names', []))}\n")
