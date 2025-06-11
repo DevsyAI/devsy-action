@@ -70,7 +70,7 @@ Base tools always included:
 - Git commands: All git operations via Bash(git:*)
 - Search: Ripgrep via Bash(rg:*)
 - Task management: Task, TodoWrite, TodoRead
-- GitHub integration: mcp__github__create_pull_request
+- GitHub integration: Bash(gh pr:*)
 
 Additional tools can be added via `allowed_tools` input.
 

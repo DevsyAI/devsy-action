@@ -21,7 +21,7 @@ def get_base_tools() -> str:
         "LS",
         "Bash(git:*)",
         "Bash(rg:*)",
-        "Bash(gh:*)",  # Allow all GitHub CLI commands
+        "Bash(gh pr:*)",  # Allow all GitHub CLI PR commands
         "Bash(cat:*)",
         "Bash(rm:*)",
         "Task",

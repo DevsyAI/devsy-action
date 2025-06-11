@@ -23,7 +23,7 @@ class TestGetBaseTools:
             "Read",
             "Write",
             "Bash(git:*)",
-            "Bash(gh:*)"  # Updated to match broader pattern
+            "Bash(gh pr:*)"  # Updated to match PR-specific pattern
         ]
         for tool in expected_tools:
             assert tool in result
