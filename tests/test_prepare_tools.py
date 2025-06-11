@@ -23,7 +23,7 @@ class TestGetBaseTools:
             "Read",
             "Write",
             "Bash(git:*)",
-            "Bash(gh:pr)"
+            "Bash(gh:pr:*)"
         ]
         for tool in expected_tools:
             assert tool in result

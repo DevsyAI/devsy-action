@@ -21,7 +21,7 @@ def get_base_tools() -> str:
         "LS",
         "Bash(git:*)",
         "Bash(rg:*)",
-        "Bash(gh:pr)",
+        "Bash(gh:pr:*)",
         "Bash(cat:*)",
         "Bash(rm:*)",
         "Task",
