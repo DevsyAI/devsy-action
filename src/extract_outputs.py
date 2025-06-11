@@ -133,7 +133,13 @@ def main():
         with open(github_output_file, "a") as f:
             f.write(f"pr_number={outputs.get('pr_number', '')}\n")
             f.write(f"pr_url={outputs.get('pr_url', '')}\n")
-            f.write(f"plan_output={json.dumps(outputs.get('plan_output', ''))}\n")
+            
+            # Use multiline delimiter for plan_output to avoid shell parsing issues
+            plan_output = outputs.get('plan_output', '')
+            delimiter = "EOF_PLAN_OUTPUT"
+            f.write(f"plan_output<<{delimiter}\n")
+            f.write(f"{plan_output}\n")
+            f.write(f"{delimiter}\n")
 
             # Debug info (not used as outputs but helpful for troubleshooting)
             f.write(f"branch_names={json.dumps(outputs.get('branch_names', []))}\n")
