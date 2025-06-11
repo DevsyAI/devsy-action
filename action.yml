@@ -215,19 +215,10 @@ runs:
         disallowed_tools: ${{ steps.prepare_tools.outputs.disallowed_tools }}
         use_bedrock: ${{ inputs.use_bedrock }}
         use_vertex: ${{ inputs.use_vertex }}
-        mcp_config: |
-          {
-            "mcpServers": {
-              "github": {
-                "command": "npx",
-                "args": ["-y", "@modelcontextprotocol/server-github"],
-                "env": {
-                  "GITHUB_PERSONAL_ACCESS_TOKEN": "${{ steps.token_exchange.outputs.github_token }}"
-                }
-              }
-            }
-          }
       env:
+        # GitHub CLI authentication
+        GITHUB_TOKEN: ${{ steps.token_exchange.outputs.github_token }}
+        
         # AWS Bedrock configuration (when use_bedrock is true)
         AWS_REGION: ${{ env.AWS_REGION }}
         AWS_ACCESS_KEY_ID: ${{ env.AWS_ACCESS_KEY_ID }}

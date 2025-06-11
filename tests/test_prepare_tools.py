@@ -23,7 +23,7 @@ class TestGetBaseTools:
             "Read",
             "Write",
             "Bash(git:*)",
-            "mcp__github__create_pull_request"
+            "Bash(gh:pr)"
         ]
         for tool in expected_tools:
             assert tool in result

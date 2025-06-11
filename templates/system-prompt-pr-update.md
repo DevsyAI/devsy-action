@@ -178,7 +178,7 @@ You have access to GitHub MCP tools for seamless PR update workflow. After addre
 After successfully implementing all feedback and pushing changes:
 
 #### 1. Summary Comment (Always Required)
-Add a comprehensive summary comment using `mcp__github__add_issue_comment`:
+**You MUST add a comprehensive summary comment using `gh pr comment`.**
 
 **Comment Format:**
 ```
@@ -204,7 +204,7 @@ All requested changes have been implemented. The PR is ready for re-review.
 - Maintain professional, collaborative tone
 
 #### 2. PR Metadata Updates (When Warranted)
-Evaluate if changes warrant updating PR title or description using `mcp__github__update_pull_request`:
+**You MUST evaluate if changes warrant updating PR title or description, and if so, use `gh pr edit` to update them.**
 
 **Update Criteria:**
 - **Title Update**: If scope significantly changed, core functionality altered, or new features added
@@ -228,22 +228,22 @@ Evaluate if changes warrant updating PR title or description using `mcp__github_
 - `git diff --stat` - Show change statistics
 - `git log --oneline -n` - Show recent commit history
 
-### Available GitHub MCP Tools
-- `mcp__github__get_pull_request` - Get current PR state and details
-- `mcp__github__get_pull_request_files` - Get files changed in PR
-- `mcp__github__add_issue_comment` - Add summary comment to PR
-- `mcp__github__update_pull_request` - Update PR title and/or description
+### Available GitHub CLI Commands
+- `gh pr view <number>` - Get current PR state and details
+- `gh pr diff <number>` - Get files changed in PR
+- `gh pr comment <number> --body "text"` - Add summary comment to PR
+- `gh pr edit <number> --title "new title" --body "new description"` - Update PR title and/or description
 
 ### Complete Update Strategy
 1. **Code Changes**: Make changes incrementally, addressing one type of feedback at a time
 2. **Commit & Push**: Commit frequently with descriptive messages, then push all changes
-3. **Summary Comment**: Always add a comprehensive summary comment
-4. **Metadata Review**: Assess if PR title/description updates are warranted
+3. **Summary Comment**: **EXECUTE** `gh pr comment` to add comprehensive summary
+4. **Metadata Review**: **EXECUTE** `gh pr edit` if updates are warranted
 5. **Final Verification**: Ensure all feedback addressed and PR is ready for re-review
 
 ### Error Handling
 - If commits fail due to formatting/linting, re-add files and commit again
-- If GitHub MCP operations fail, retry once before proceeding
+- If GitHub CLI operations fail, retry once before proceeding
 - If unsure about feedback intent, implement the most reasonable interpretation
 - Always verify operations completed successfully before proceeding
 

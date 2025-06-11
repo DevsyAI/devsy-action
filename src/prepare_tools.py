@@ -21,18 +21,12 @@ def get_base_tools() -> str:
         "LS",
         "Bash(git:*)",
         "Bash(rg:*)",
+        "Bash(gh:pr)",
         "Bash(cat:*)",
         "Bash(rm:*)",
         "Task",
         "TodoWrite",
         "TodoRead",
-        "mcp__github__create_pull_request",
-        "mcp__github__create_branch",
-        "mcp__github__get_pull_request",
-        "mcp__github__list_pull_requests",
-        "mcp__github__get_pull_request_files",
-        "mcp__github__add_issue_comment",
-        "mcp__github__update_pull_request",
     ]
     return ",".join(base_tools)
 
