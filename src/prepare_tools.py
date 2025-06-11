@@ -32,6 +32,7 @@ def get_base_tools() -> str:
         "mcp__github__list_pull_requests",
         "mcp__github__get_pull_request_files",
         "mcp__github__add_issue_comment",
+        "mcp__github__update_pull_request",
     ]
     return ",".join(base_tools)
 
