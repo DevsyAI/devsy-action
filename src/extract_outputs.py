@@ -2,11 +2,11 @@
 """Extract outputs from Claude's execution results for GitHub Actions."""
 
 import argparse
+import base64
 import json
 import os
 import re
 import sys
-import time
 from pathlib import Path
 
 
@@ -135,13 +135,11 @@ def main():
             f.write(f"pr_number={outputs.get('pr_number', '')}\n")
             f.write(f"pr_url={outputs.get('pr_url', '')}\n")
             
-            # Use GitHub Actions heredoc syntax for multiline output (safe from shell interpretation)
+            # Base64 encode plan_output to avoid shell parsing issues
             plan_output = outputs.get('plan_output', '')
             if plan_output:
-                delimiter = f"EOF_{int(time.time())}"
-                f.write(f"plan_output<<{delimiter}\n")
-                f.write(plan_output)
-                f.write(f"\n{delimiter}\n")
+                plan_output_b64 = base64.b64encode(plan_output.encode('utf-8')).decode('ascii')
+                f.write(f"plan_output={plan_output_b64}\n")
             else:
                 f.write(f"plan_output=\n")
 
