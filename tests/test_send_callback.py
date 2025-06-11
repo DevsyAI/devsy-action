@@ -2,12 +2,15 @@
 
 import pytest
 import responses
+import tempfile
+import os
 from unittest.mock import patch
 from datetime import datetime, timezone
 from src.send_callback import (
     prepare_callback_data,
     prepare_headers,
     send_callback,
+    read_execution_file,
     main
 )
 
@@ -36,6 +39,7 @@ class TestPrepareCallbackData:
         assert result["pr_url"] == "https://github.com/owner/repo/pull/456"
         assert result["plan_output"] is None  # Empty string becomes None
         assert result["execution_file"] == "execution.json"
+        assert result["execution_file_contents"] is None  # File doesn't exist
         assert result["token_source"] == "devsy-bot"
         assert "timestamp" in result
 
@@ -56,6 +60,7 @@ class TestPrepareCallbackData:
         assert result["pr_number"] is None
         assert result["pr_url"] is None
         assert result["plan_output"] == "detailed plan"
+        assert result["execution_file_contents"] is None  # File doesn't exist
 
     def test_timestamp_format(self):
         """Test that timestamp is in correct ISO format."""
@@ -67,6 +72,85 @@ class TestPrepareCallbackData:
         # Should be able to parse the timestamp
         parsed = datetime.fromisoformat(timestamp.replace('Z', '+00:00'))
         assert parsed.tzinfo == timezone.utc
+
+    def test_prepare_callback_data_with_execution_file(self):
+        """Test callback data preparation with existing execution file."""
+        # Create a temporary file with test content
+        with tempfile.NamedTemporaryFile(mode='w', delete=False, suffix='.json') as f:
+            test_content = '{"test": "execution data", "costs": {"total": 0.50}}'
+            f.write(test_content)
+            temp_file_path = f.name
+        
+        try:
+            result = prepare_callback_data(
+                run_id="123",
+                run_url="https://example.com",
+                mode="pr-gen",
+                conclusion="success",
+                pr_number="456",
+                pr_url="https://example.com/pr/456",
+                plan_output="",
+                execution_file=temp_file_path,
+                token_source="devsy-bot"
+            )
+            
+            assert result["execution_file"] == temp_file_path
+            assert result["execution_file_contents"] == test_content
+        finally:
+            # Clean up
+            os.unlink(temp_file_path)
+
+
+class TestReadExecutionFile:
+    """Test execution file reading."""
+
+    def test_read_execution_file_exists(self):
+        """Test reading an existing execution file."""
+        with tempfile.NamedTemporaryFile(mode='w', delete=False, suffix='.json') as f:
+            test_content = '{"execution": "data", "costs": {"input_tokens": 100}}'
+            f.write(test_content)
+            temp_file_path = f.name
+        
+        try:
+            result = read_execution_file(temp_file_path)
+            assert result == test_content
+        finally:
+            os.unlink(temp_file_path)
+
+    def test_read_execution_file_not_exists(self):
+        """Test reading a non-existent execution file."""
+        result = read_execution_file("/path/that/does/not/exist.json")
+        assert result is None
+
+    def test_read_execution_file_empty_path(self):
+        """Test reading with empty file path."""
+        result = read_execution_file("")
+        assert result is None
+
+    def test_read_execution_file_none_path(self):
+        """Test reading with None file path."""
+        result = read_execution_file(None)
+        assert result is None
+
+    def test_read_execution_file_permission_error(self, capsys):
+        """Test handling of permission errors when reading execution file."""
+        with tempfile.NamedTemporaryFile(mode='w', delete=False) as f:
+            f.write("test content")
+            temp_file_path = f.name
+        
+        try:
+            # Change permissions to make file unreadable
+            os.chmod(temp_file_path, 0o000)
+            
+            result = read_execution_file(temp_file_path)
+            assert result is None
+            
+            captured = capsys.readouterr()
+            assert "⚠️  Warning: Failed to read execution file" in captured.out
+        finally:
+            # Restore permissions and clean up
+            os.chmod(temp_file_path, 0o644)
+            os.unlink(temp_file_path)
 
 
 class TestPrepareHeaders:

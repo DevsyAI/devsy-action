@@ -15,6 +15,17 @@ from typing import Dict, Any, Optional
 import requests
 
 
+def read_execution_file(execution_file: str) -> Optional[str]:
+    """Read and return the execution file contents."""
+    try:
+        if execution_file and os.path.exists(execution_file):
+            with open(execution_file, 'r', encoding='utf-8') as f:
+                return f.read()
+    except Exception as e:
+        print(f"⚠️  Warning: Failed to read execution file {execution_file}: {e}")
+    return None
+
+
 def prepare_callback_data(
     run_id: str,
     run_url: str,
@@ -27,6 +38,9 @@ def prepare_callback_data(
     token_source: str,
 ) -> Dict[str, Any]:
     """Prepare the callback data payload."""
+    # Read execution file contents
+    execution_file_contents = read_execution_file(execution_file)
+    
     return {
         "run_id": run_id,
         "run_url": run_url,
@@ -36,6 +50,7 @@ def prepare_callback_data(
         "pr_url": pr_url if pr_url else None,
         "plan_output": plan_output if plan_output else None,
         "execution_file": execution_file,
+        "execution_file_contents": execution_file_contents,
         "token_source": token_source,
         "timestamp": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
     }
