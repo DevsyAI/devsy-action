@@ -90,18 +90,18 @@ def extract_plan_content(content):
     if not content:
         return ""
     
-    # Look for markdown code block containing the plan
+    # Look for plan content between delimiter blocks
     import re
     
-    # Pattern to match ```markdown ... ``` blocks
-    pattern = r'```markdown\s*(.*?)\s*```'
+    # Pattern to match content between START and END delimiters
+    pattern = r'=== START OF PLAN MARKDOWN ===\s*(.*?)\s*=== END OF PLAN MARKDOWN ==='
     matches = re.findall(pattern, content, re.DOTALL)
     
     if matches:
-        # Return the content from the first markdown block found
+        # Return the content from the first delimited block found
         return matches[0].strip()
     
-    # Fallback: return the whole content if no markdown block found
+    # Fallback: return the whole content if no delimited block found
     return content.strip()
 
 

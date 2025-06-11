@@ -61,11 +61,11 @@ project-structure/
 {{ custom_instructions }}
 
 ## Output Format
-Please provide your complete implementation plan within a markdown code block:
+Please provide your complete implementation plan between the delimiter blocks:
 
-```markdown
+=== START OF PLAN MARKDOWN ===
 [Your complete implementation plan following the structure above]
-```
+=== END OF PLAN MARKDOWN ===
 
 ## Quality Standards
 - Be specific and actionable with concrete examples
