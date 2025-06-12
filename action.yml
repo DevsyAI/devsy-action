@@ -133,12 +133,18 @@ runs:
     - name: Validate inputs
       shell: bash
       run: |
+        # Base64 encode prompt to avoid shell parsing issues
+        PROMPT_B64=""
+        if [[ -n "${{ inputs.prompt }}" ]]; then
+          PROMPT_B64=$(echo -n "${{ inputs.prompt }}" | base64 -w 0)
+        fi
+        
         /tmp/devsy-action-env/bin/python ${{ github.action_path }}/src/validate_inputs.py \
           --mode "${{ inputs.mode }}" \
           --anthropic-api-key "${{ inputs.anthropic_api_key }}" \
           --use-bedrock "${{ inputs.use_bedrock }}" \
           --use-vertex "${{ inputs.use_vertex }}" \
-          --prompt "${{ inputs.prompt }}" \
+          --prompt-b64 "$PROMPT_B64" \
           --prompt-file "${{ inputs.prompt_file }}" \
           --pr-number "${{ inputs.pr_number }}"
 

@@ -6,6 +6,7 @@ This script validates the required inputs for different modes and authentication
 """
 
 import argparse
+import base64
 import sys
 from typing import List
 
@@ -61,15 +62,27 @@ def main() -> None:
     parser.add_argument("--use-bedrock", default="false", help="Use AWS Bedrock")
     parser.add_argument("--use-vertex", default="false", help="Use Google Vertex")
     parser.add_argument("--prompt", default="", help="User prompt")
+    parser.add_argument("--prompt-b64", default="", help="Base64-encoded user prompt")
     parser.add_argument("--prompt-file", default="", help="Prompt file path")
     parser.add_argument("--pr-number", default="", help="PR number for updates")
 
     args = parser.parse_args()
 
+    # Decode base64-encoded prompt if provided, otherwise use regular prompt
+    prompt = ""
+    if args.prompt_b64:
+        try:
+            prompt = base64.b64decode(args.prompt_b64).decode('utf-8')
+        except Exception as e:
+            print(f"Error decoding base64 prompt: {e}", file=sys.stderr)
+            sys.exit(1)
+    elif args.prompt:
+        prompt = args.prompt
+
     # Run all validations
     validate_mode(args.mode)
     validate_authentication(args.anthropic_api_key, args.use_bedrock, args.use_vertex)
-    validate_mode_requirements(args.mode, args.prompt, args.prompt_file, args.pr_number)
+    validate_mode_requirements(args.mode, prompt, args.prompt_file, args.pr_number)
 
     print("✅ All input validations passed")
 
