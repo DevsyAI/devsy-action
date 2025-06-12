@@ -30,20 +30,14 @@ else
     exit 1
 fi
 
-# Ask if user wants setup script
-echo ""
-read -p "📦 Do you want to create a setup script for dependencies? (y/N): " -n 1 -r
-echo ""
+# Create setup script
+echo "📁 Creating .devsy directory..."
+mkdir -p .devsy
 
-if [[ $REPLY =~ ^[Yy]$ ]]; then
-    echo "📁 Creating .devsy directory..."
-    mkdir -p .devsy
-    
-    echo "📄 Downloading setup script template..."
-    curl -s -o .devsy/setup.sh https://raw.githubusercontent.com/DevsyAI/devsy-action/main/setup.sh
-    chmod +x .devsy/setup.sh
-    echo "✅ Created .devsy/setup.sh (edit to uncomment sections you need)"
-fi
+echo "📄 Downloading setup script template..."
+curl -s -o .devsy/setup.sh https://raw.githubusercontent.com/DevsyAI/devsy-action/main/setup.sh
+chmod +x .devsy/setup.sh
+echo "✅ Created .devsy/setup.sh (edit to uncomment sections you need)"
 
 echo ""
 echo "🎉 Devsy Action installed successfully!"
