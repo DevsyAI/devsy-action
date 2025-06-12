@@ -146,12 +146,23 @@ runs:
       id: prepare_prompt
       shell: bash
       run: |
-        # Set up the prompt based on mode
+        # Base64 encode prompt inputs to avoid shell parsing issues with special characters
+        PROMPT_B64=""
+        if [[ -n "${{ inputs.prompt }}" ]]; then
+          PROMPT_B64=$(echo -n "${{ inputs.prompt }}" | base64 -w 0)
+        fi
+        
+        CUSTOM_INSTRUCTIONS_B64=""
+        if [[ -n "${{ inputs.custom_instructions }}" ]]; then
+          CUSTOM_INSTRUCTIONS_B64=$(echo -n "${{ inputs.custom_instructions }}" | base64 -w 0)
+        fi
+        
+        # Set up the arguments with base64-encoded inputs
         args=(
           "--mode" "${{ inputs.mode }}"
-          "--prompt" "${{ inputs.prompt }}"
+          "--prompt-b64" "$PROMPT_B64"
           "--prompt-file" "${{ inputs.prompt_file }}"
-          "--custom-instructions" "${{ inputs.custom_instructions }}"
+          "--custom-instructions-b64" "$CUSTOM_INSTRUCTIONS_B64"
           "--github-token" "${{ github.token }}"
           "--repo" "${{ github.repository }}"
           "--base-branch" "${{ inputs.base_branch }}"

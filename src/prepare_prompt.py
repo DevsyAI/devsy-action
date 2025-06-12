@@ -2,6 +2,7 @@
 """Prepare the prompt for Claude Code based on the action mode."""
 
 import argparse
+import base64
 import json
 import os
 import sys
@@ -126,19 +127,42 @@ def main():
     parser.add_argument("--mode", required=True, choices=["pr-gen", "pr-update", "plan-gen"])
     parser.add_argument("--pr-number", type=int)
     parser.add_argument("--prompt")
+    parser.add_argument("--prompt-b64", help="Base64-encoded prompt to avoid shell parsing issues")
     parser.add_argument("--prompt-file")
     parser.add_argument("--custom-instructions", default="")
+    parser.add_argument("--custom-instructions-b64", help="Base64-encoded custom instructions")
     parser.add_argument("--github-token", required=True)
     parser.add_argument("--repo", required=True)
     parser.add_argument("--base-branch", default="main")
 
     args = parser.parse_args()
 
-    # Read prompt from file if provided
-    user_prompt = args.prompt or ""
+    # Decode base64-encoded prompt if provided, otherwise use regular prompt
+    user_prompt = ""
+    if args.prompt_b64:
+        try:
+            user_prompt = base64.b64decode(args.prompt_b64).decode('utf-8')
+        except Exception as e:
+            print(f"Error decoding base64 prompt: {e}", file=sys.stderr)
+            sys.exit(1)
+    elif args.prompt:
+        user_prompt = args.prompt
+    
+    # Read prompt from file if provided (overrides other prompt sources)
     if args.prompt_file and os.path.exists(args.prompt_file):
         with open(args.prompt_file, "r") as f:
             user_prompt = f.read().strip()
+
+    # Decode base64-encoded custom instructions if provided
+    custom_instructions = ""
+    if args.custom_instructions_b64:
+        try:
+            custom_instructions = base64.b64decode(args.custom_instructions_b64).decode('utf-8')
+        except Exception as e:
+            print(f"Error decoding base64 custom instructions: {e}", file=sys.stderr)
+            sys.exit(1)
+    elif args.custom_instructions:
+        custom_instructions = args.custom_instructions
 
     try:
         # Load mode-specific system prompt
@@ -147,20 +171,20 @@ def main():
         # Prepare user prompt based on mode
         if args.mode == "pr-gen":
             user_prompt_formatted = prepare_pr_gen_prompt(
-                user_prompt, args.custom_instructions, args.repo, args.base_branch
+                user_prompt, custom_instructions, args.repo, args.base_branch
             )
         elif args.mode == "pr-update":
             user_prompt_formatted = prepare_pr_update_prompt(
                 args.pr_number,
                 args.repo,
                 args.github_token,
-                args.custom_instructions,
+                custom_instructions,
                 user_prompt,
                 args.base_branch,
             )
         elif args.mode == "plan-gen":
             user_prompt_formatted = prepare_plan_gen_prompt(
-                user_prompt, args.custom_instructions, args.repo, args.base_branch
+                user_prompt, custom_instructions, args.repo, args.base_branch
             )
 
         # Output for GitHub Actions using JSON serialization for shell safety
