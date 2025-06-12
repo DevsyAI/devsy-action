@@ -163,10 +163,32 @@ def main():
                 user_prompt, args.custom_instructions, args.repo, args.base_branch
             )
 
-        # Output for GitHub Actions (using new format)
+        # Output for GitHub Actions using JSON serialization for shell safety
         with open(os.environ.get("GITHUB_OUTPUT", "/dev/stdout"), "a") as f:
-            f.write(f"system_prompt={json.dumps(system_prompt)}\n")
-            f.write(f"user_prompt={json.dumps(user_prompt_formatted)}\n")
+            # Use jq-compatible JSON serialization to handle untrusted content safely
+            import subprocess
+            
+            # Serialize system_prompt using jq for shell safety
+            # Use -Rs to read entire input as single string, then remove trailing newline in jq
+            system_prompt_json = subprocess.run(
+                ["jq", "-Rs", "rtrimstr(\"\\n\")"],
+                input=system_prompt,
+                text=True,
+                capture_output=True,
+                check=True
+            ).stdout.strip()
+            
+            # Serialize user_prompt using jq for shell safety  
+            user_prompt_json = subprocess.run(
+                ["jq", "-Rs", "rtrimstr(\"\\n\")"],
+                input=user_prompt_formatted,
+                text=True,
+                capture_output=True,
+                check=True
+            ).stdout.strip()
+            
+            f.write(f"system_prompt={system_prompt_json}\n")
+            f.write(f"user_prompt={user_prompt_json}\n")
 
     except Exception as e:
         print(f"Error preparing prompt: {e}", file=sys.stderr)

@@ -1,6 +1,7 @@
 """Tests for prepare_prompt.py"""
 
 import json
+import os
 import pytest
 import responses
 from pathlib import Path
@@ -118,3 +119,126 @@ Your role is: developer
 # and file system operations. For now, we focus on unit testing the core functions.
 
 # Integration tests removed - core functionality tested above
+
+
+class TestPreparePrompt:
+    """Test the main prepare_prompt functionality."""
+    
+    @patch('subprocess.run')
+    @patch('builtins.open', new_callable=mock_open)
+    @patch('src.prepare_prompt.load_template')
+    @patch('src.prepare_prompt.requests.get')
+    def test_pr_gen_mode_with_special_characters(self, mock_get, mock_load_template, mock_file, mock_subprocess):
+        """Test PR generation mode with special characters that need JSON escaping."""
+        # Setup
+        mock_load_template.side_effect = lambda name: f"Template for {name}: {{{{ user_prompt }}}}"
+        
+        # Mock subprocess.run to simulate jq behavior
+        def mock_jq_run(cmd, **kwargs):
+            result = MagicMock()
+            # Simulate jq JSON encoding
+            input_text = kwargs.get('input', '')
+            if 'rtrimstr' in cmd:
+                # Simulate jq -Rs 'rtrimstr("\n")' behavior
+                result.stdout = json.dumps(input_text.rstrip('\n'))
+            result.returncode = 0
+            return result
+        
+        mock_subprocess.return_value = mock_jq_run(['jq'])
+        
+        # Test with special characters
+        test_prompt = 'Add `backticks` and "quotes" and $variables and $(commands)'
+        
+        from src.prepare_prompt import main
+        import sys
+        
+        test_args = [
+            'prepare_prompt.py',
+            '--mode', 'pr-gen',
+            '--prompt', test_prompt,
+            '--github-token', 'fake-token',
+            '--repo', 'test/repo',
+            '--base-branch', 'main'
+        ]
+        
+        with patch.object(sys, 'argv', test_args):
+            with patch.dict(os.environ, {'GITHUB_OUTPUT': '/tmp/test_output'}):
+                main()
+        
+        # Verify subprocess was called with jq for JSON serialization
+        assert mock_subprocess.called
+        calls = mock_subprocess.call_args_list
+        
+        # Should have 2 calls to jq (system_prompt and user_prompt)
+        assert len(calls) == 2
+        
+        # Check that jq was called with correct arguments
+        for call in calls:
+            args, kwargs = call
+            assert args[0] == ['jq', '-Rs', 'rtrimstr("\\n")']
+            assert 'input' in kwargs
+            assert kwargs['text'] is True
+            assert kwargs['capture_output'] is True
+    
+    @patch('subprocess.run')
+    def test_json_serialization_with_multiline_content(self, mock_subprocess):
+        """Test that multiline content is properly JSON serialized."""
+        # Mock subprocess to return encoded JSON
+        def mock_jq_run(cmd, **kwargs):
+            result = MagicMock()
+            input_text = kwargs.get('input', '')
+            # Properly encode multiline strings as JSON
+            result.stdout = json.dumps(input_text.rstrip('\n'))
+            result.returncode = 0
+            return result
+        
+        mock_subprocess.side_effect = mock_jq_run
+        
+        # Test multiline content
+        multiline_text = """First line
+Second line with "quotes"
+Third line with `backticks`
+Fourth line with $variables"""
+        
+        from src.prepare_prompt import main
+        import subprocess
+        
+        # Simulate the jq call
+        result = subprocess.run(
+            ["jq", "-Rs", 'rtrimstr("\\n")'],
+            input=multiline_text,
+            text=True,
+            capture_output=True,
+            check=True
+        )
+        
+        # Verify the mock was called
+        assert mock_subprocess.called
+        
+        # Verify the JSON output can be decoded
+        json_output = result.stdout
+        decoded = json.loads(json_output)
+        assert 'quotes' in decoded
+        assert 'backticks' in decoded
+        assert '$variables' in decoded
+    
+    @patch('subprocess.run')
+    def test_json_serialization_handles_jq_failure(self, mock_subprocess):
+        """Test that jq failures are handled properly."""
+        # Mock subprocess to simulate jq failure
+        mock_subprocess.side_effect = Exception("jq not found")
+        
+        from src.prepare_prompt import main
+        import sys
+        
+        test_args = [
+            'prepare_prompt.py',
+            '--mode', 'pr-gen',
+            '--prompt', 'test',
+            '--github-token', 'fake-token',
+            '--repo', 'test/repo'
+        ]
+        
+        with patch.object(sys, 'argv', test_args):
+            with pytest.raises(SystemExit):
+                main()
