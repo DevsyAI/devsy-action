@@ -62,16 +62,15 @@ echo ""
 echo "3. 🔗 Add callback token for webhooks:"
 echo "   • Org Admin: Generate token at devsy.ai Settings page"
 echo "   • Create secret: DEVSY_ORG_OAUTH_TOKEN"
-echo ""
-echo "4. 🚀 You're all set!"
-echo "   • Use Devsy like you normally do in your existing tools"
-
 if [[ $REPLY =~ ^[Yy]$ ]]; then
     echo ""
     echo "4. 📦 Edit .devsy/setup.sh:"
     echo "   • Uncomment the sections for your project's language/framework"
     echo "   • This will install dependencies before Devsy runs"
 fi
+echo ""
+echo "🚀 You're all set!  Use Devsy like you normally do in your existing tools"
+
 
 echo ""
 echo "📖 Full documentation: https://github.com/DevsyAI/devsy-action"
