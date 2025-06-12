@@ -4,7 +4,7 @@ import os
 import tempfile
 import pytest
 from unittest.mock import patch, mock_open
-from src.prepare_tools import get_base_tools, combine_tools, set_github_output, main
+from src.prepare_tools import get_base_tools, get_default_disallowed_tools, combine_tools, set_github_output, main
 
 
 class TestGetBaseTools:
@@ -34,6 +34,28 @@ class TestGetBaseTools:
         tools = result.split(",")
         assert len(tools) > 10  # Should have many base tools
         assert all(tool.strip() for tool in tools)  # No empty tools
+
+
+class TestGetDefaultDisallowedTools:
+    """Test getting default disallowed tools."""
+    
+    def test_get_default_disallowed_tools_returns_string(self):
+        """Test that get_default_disallowed_tools returns a string."""
+        result = get_default_disallowed_tools()
+        assert isinstance(result, str)
+    
+    def test_get_default_disallowed_tools_contains_expected_tools(self):
+        """Test that default disallowed tools contain WebFetch and WebSearch."""
+        result = get_default_disallowed_tools()
+        assert "WebFetch" in result
+        assert "WebSearch" in result
+    
+    def test_get_default_disallowed_tools_format(self):
+        """Test that default disallowed tools are comma-separated."""
+        result = get_default_disallowed_tools()
+        tools = result.split(",")
+        assert len(tools) == 2
+        assert all(tool.strip() for tool in tools)
 
 
 class TestCombineTools:
@@ -98,3 +120,46 @@ class TestSetGithubOutput:
 
 
 # Main function integration tests removed - covered by manual testing
+
+
+class TestMainFunction:
+    """Test main function integration."""
+    
+    @patch('src.prepare_tools.set_github_output')
+    def test_main_with_default_disallowed_tools(self, mock_set_output):
+        """Test that main function includes default disallowed tools."""
+        import sys
+        from src.prepare_tools import main
+        
+        test_args = ['prepare_tools.py']
+        
+        with patch.object(sys, 'argv', test_args):
+            main()
+        
+        # Check that set_github_output was called with default disallowed tools
+        calls = mock_set_output.call_args_list
+        disallowed_call = [call for call in calls if call[0][0] == 'disallowed_tools'][0]
+        
+        # Should contain WebFetch and WebSearch
+        assert disallowed_call[0][1] == "WebFetch,WebSearch"
+    
+    @patch('src.prepare_tools.set_github_output')
+    def test_main_combines_user_disallowed_tools(self, mock_set_output):
+        """Test that main function combines default and user disallowed tools."""
+        import sys
+        from src.prepare_tools import main
+        
+        test_args = ['prepare_tools.py', '--disallowed-tools', 'CustomTool,AnotherTool']
+        
+        with patch.object(sys, 'argv', test_args):
+            main()
+        
+        # Check that set_github_output was called with combined disallowed tools
+        calls = mock_set_output.call_args_list
+        disallowed_call = [call for call in calls if call[0][0] == 'disallowed_tools'][0]
+        
+        # Should contain default tools plus user tools
+        assert "WebFetch" in disallowed_call[0][1]
+        assert "WebSearch" in disallowed_call[0][1]
+        assert "CustomTool" in disallowed_call[0][1]
+        assert "AnotherTool" in disallowed_call[0][1]

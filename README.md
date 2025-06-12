@@ -155,7 +155,7 @@ jobs:
 - `prompt_file`: Path to a file containing the prompt (alternative to `prompt`)
 - `custom_instructions`: Additional instructions for Claude
 - `allowed_tools`: Additional tools for Claude to use (base tools are always included)
-- `disallowed_tools`: Tools that Claude should never use
+- `disallowed_tools`: Additional tools to disallow beyond the defaults (WebFetch, WebSearch)
 - `base_branch`: Base branch for new PRs (default: `main`)
 - `callback_url`: URL to POST completion status and results
 - `callback_auth_token`: Bearer token for callback authentication
@@ -172,7 +172,11 @@ The action includes a comprehensive set of base tools that are always available:
 - **Git Commands**: `Bash(git:*)` - All git operations
 - **Search**: `Bash(rg:*)` - Ripgrep for fast code search
 - **Task Management**: `Task`, `TodoWrite`, `TodoRead`
-- **GitHub Integration**: `mcp__github__create_pull_request`
+- **GitHub CLI**: `Bash(gh pr:*)` - GitHub CLI PR commands
+
+**Default Disallowed Tools:**
+- `WebFetch` - Web content fetching
+- `WebSearch` - Web search functionality
 
 **Additional Tools**: Use `allowed_tools` to add more tools like:
 - `Bash(npm install)` - Specific npm commands

@@ -72,7 +72,12 @@ Base tools always included:
 - Task management: Task, TodoWrite, TodoRead
 - GitHub integration: Bash(gh pr:*)
 
+Default disallowed tools:
+- WebFetch - Web content fetching
+- WebSearch - Web search functionality
+
 Additional tools can be added via `allowed_tools` input.
+Additional disallowed tools can be specified via `disallowed_tools` input.
 
 ## Common Development Tasks
 
