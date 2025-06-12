@@ -64,9 +64,8 @@ echo "   • Org Admin: Generate token at devsy.ai Settings page"
 echo "   • Create secret: DEVSY_ORG_OAUTH_TOKEN"
 echo "   • Uncomment callback_auth_token line in devsy.yml"
 echo ""
-echo "4. 🚀 Trigger your first action:"
-echo "   • Go to Actions tab → Devsy → Run workflow"
-echo "   • Or use the GitHub API for remote triggering"
+echo "4. 🚀 You're all set!"
+echo "   • Use Devsy like you normally do in your existing tools"
 
 if [[ $REPLY =~ ^[Yy]$ ]]; then
     echo ""
