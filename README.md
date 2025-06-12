@@ -68,7 +68,6 @@ To receive completion webhooks, add a callback token:
 3. **Create**: Click **"New repository secret"**
    - **Name**: `DEVSY_ORG_OAUTH_TOKEN`
    - **Value**: Token from devsy.ai Settings page
-4. **Uncomment**: In your `devsy.yml`, uncomment the callback_auth_token line
 
 > This enables secure webhook notifications when Devsy completes tasks.
 

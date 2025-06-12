@@ -81,7 +81,7 @@ jobs:
           
           # === Callback Configuration ===
           callback_url: ${{ inputs.callback_url }}
-          # callback_auth_token: ${{ secrets.DEVSY_CALLBACK_TOKEN }}
+          callback_auth_token: ${{ secrets.DEVSY_ORG_OAUTH_TOKEN }}
           
           # === API Keys ===
           anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
