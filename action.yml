@@ -37,11 +37,15 @@ inputs:
   max_turns:
     description: "Maximum number of conversation turns for Claude"
     required: false
-    default: "200"
+    default: "300"
   timeout_minutes:
     description: "Timeout in minutes for Claude Code execution"
     required: false
-    default: "10"
+    default: "30"
+  claude_env:
+    description: "Environment variables to pass to Claude Code execution"
+    required: false
+    default: ""
 
   # === Devsy Action Configuration ===
   mode:
@@ -209,6 +213,7 @@ runs:
         disallowed_tools: ${{ steps.prepare_tools.outputs.disallowed_tools }}
         use_bedrock: ${{ inputs.use_bedrock }}
         use_vertex: ${{ inputs.use_vertex }}
+        claude_env: ${{ inputs.claude_env }}
       env:
         # GitHub CLI authentication
         GITHUB_TOKEN: ${{ steps.token_exchange.outputs.github_token }}
