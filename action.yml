@@ -199,7 +199,7 @@ runs:
           --allowed-tools "${{ inputs.allowed_tools }}" \
           --disallowed-tools "${{ inputs.disallowed_tools }}"
 
-    - name: Run Claude Code with GitHub MCP
+    - name: Run Claude Code with git and gh tools
       id: run_claude
       uses: anthropics/claude-code-base-action@main
       with:
