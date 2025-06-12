@@ -10,22 +10,55 @@ A GitHub Action that leverages Claude Code to automatically generate pull reques
 - **Remote Triggering**: Designed for `workflow_dispatch` to be called programmatically
 - **Callback Support**: Optional webhook callback when execution completes
 
-## Setup
+## Quick Setup (3 Steps)
 
-### Required: Anthropic API Key
+### Step 1: Copy the Workflow File
 
-Before using this action, you need to set up authentication. The easiest method is to add your Anthropic API key to repository secrets:
+Copy `.github/workflows/devsy.yml.example` to `.github/workflows/devsy.yml` in your repository:
 
-1. **Get an API key**: Visit [console.anthropic.com](https://console.anthropic.com) to get your API key
-2. **Add to repository secrets**:
-   - Go to your repository **Settings** > **Secrets and variables** > **Actions**
-   - Click **"New repository secret"**
+```bash
+mkdir -p .github/workflows
+curl -o .github/workflows/devsy.yml https://raw.githubusercontent.com/DevsyAI/devsy-action/main/.github/workflows/devsy.yml.example
+```
+
+Or manually copy the content from [devsy.yml.example](.github/workflows/devsy.yml.example).
+
+### Step 2: Configure Repository Settings
+
+Enable GitHub Actions to create pull requests:
+
+1. **Repository Settings**: Go to **Settings** → **Actions** → **General**
+2. **Enable PR Creation**: Check ✅ **"Allow GitHub Actions to create and approve pull requests"**
+3. **Set Permissions**: Under "Workflow permissions", select **"Read and write permissions"**
+
+> **For Organization Repos**: You must enable this setting at the organization level first, then at the repository level.
+
+### Step 3: Add Your API Key
+
+Add your Anthropic API key to repository secrets:
+
+1. **Get API Key**: Visit [console.anthropic.com](https://console.anthropic.com)
+2. **Add Secret**: Go to **Settings** → **Secrets and variables** → **Actions**
+3. **Create**: Click **"New repository secret"**
    - **Name**: `ANTHROPIC_API_KEY`
-   - **Value**: Your Anthropic API key
+   - **Value**: Your API key
+
+## Optional Setup
+
+### Custom Setup Script (Optional)
+
+For projects with dependencies, create a setup script:
+
+```bash
+mkdir -p .devsy
+curl -o .devsy/setup.sh.example https://raw.githubusercontent.com/DevsyAI/devsy-action/main/.devsy/setup.sh.example
+```
+
+Then copy to `.devsy/setup.sh` and uncomment the sections you need (Python, Node.js, etc.).
 
 ### Alternative Authentication
 
-Instead of an API key, you can use:
+Instead of Anthropic API key, you can use:
 - **AWS Bedrock**: Set `use_bedrock: true` (requires AWS credentials)
 - **Google Vertex**: Set `use_vertex: true` (requires GCP credentials)
 
