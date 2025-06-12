@@ -87,7 +87,7 @@ def exchange_for_devsy_bot_token(oidc_token: str) -> Optional[str]:
     """Exchange OIDC token for devsy-bot installation token."""
     # Get backend URL (configurable for different environments)
     backend_url = os.getenv("DEVSY_BACKEND_URL", "https://devsy.ai")
-    exchange_url = f"{backend_url}/api/github-app/token-exchange"
+    exchange_url = f"{backend_url}/api/github-app/oidc-token-exchange"
 
     # Make the token exchange request with OIDC token
     try:
