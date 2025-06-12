@@ -7,6 +7,7 @@ import responses
 from unittest.mock import patch, MagicMock
 from src.github_token_exchange import (
     get_github_token,
+    get_oidc_token,
     exchange_for_devsy_bot_token,
     set_github_output,
     main
@@ -67,12 +68,14 @@ class TestGetGithubToken:
             with pytest.raises(ValueError, match="GITHUB_TOKEN environment variable is required"):
                 get_github_token()
 
+    @patch('src.github_token_exchange.get_oidc_token')
     @patch('src.github_token_exchange.exchange_for_devsy_bot_token')
-    def test_get_github_token_successful_exchange(self, mock_exchange, tmp_path):
-        """Test successful devsy-bot token exchange."""
+    def test_get_github_token_successful_exchange(self, mock_exchange, mock_oidc, tmp_path):
+        """Test successful devsy-bot token exchange using OIDC."""
         output_file = tmp_path / "output"
         output_file.write_text("")
         
+        mock_oidc.return_value = "oidc-token"
         mock_exchange.return_value = "devsy-token"
         
         with patch.dict(os.environ, {
@@ -82,7 +85,8 @@ class TestGetGithubToken:
             result = get_github_token()
         
         assert result == "devsy-token"
-        mock_exchange.assert_called_once_with("github-token")
+        mock_oidc.assert_called_once()
+        mock_exchange.assert_called_once_with("oidc-token")
 
     # Exchange failure tests removed - complex mocking scenarios
 
