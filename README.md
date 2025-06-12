@@ -10,125 +10,83 @@ A GitHub Action that leverages Claude Code to automatically generate pull reques
 - **Remote Triggering**: Designed for `workflow_dispatch` to be called programmatically
 - **Callback Support**: Optional webhook callback when execution completes
 
-## Setup
+## Quick Setup 
 
-### Required: Anthropic API Key
+### One-Command Install
 
-Before using this action, you need to set up authentication. The easiest method is to add your Anthropic API key to repository secrets:
+Run this in your repository root:
 
-1. **Get an API key**: Visit [console.anthropic.com](https://console.anthropic.com) to get your API key
-2. **Add to repository secrets**:
-   - Go to your repository **Settings** > **Secrets and variables** > **Actions**
-   - Click **"New repository secret"**
+```bash
+curl -fsSL https://raw.githubusercontent.com/DevsyAI/devsy-action/main/install-devsy.sh | bash
+```
+
+This automatically creates the workflow file and optionally sets up a dependency script.
+
+### Manual Setup (4 Steps)
+
+If you prefer manual setup:
+
+#### Step 1: Copy the Workflow File
+
+Copy `devsy.yml` to `.github/workflows/devsy.yml` in your repository:
+
+```bash
+mkdir -p .github/workflows
+curl -o .github/workflows/devsy.yml https://raw.githubusercontent.com/DevsyAI/devsy-action/main/devsy.yml
+```
+
+Or manually copy the content from [devsy.yml](devsy.yml).
+
+#### Step 2: Configure Repository Settings
+
+Enable GitHub Actions to create pull requests:
+
+1. **Repository Settings**: Go to **Settings** → **Actions** → **General**
+2. **Enable PR Creation**: Check ✅ **"Allow GitHub Actions to create and approve pull requests"**
+3. **Set Permissions**: Under "Workflow permissions", select **"Read and write permissions"**
+
+> **For Organization Repos**: You must enable this setting at the organization level first, then at the repository level.
+
+#### Step 3: Add Your API Key
+
+Add your Anthropic API key to repository secrets:
+
+1. **Get API Key**: Visit [console.anthropic.com](https://console.anthropic.com)
+2. **Add Secret**: Go to **Settings** → **Secrets and variables** → **Actions**
+3. **Create**: Click **"New repository secret"**
    - **Name**: `ANTHROPIC_API_KEY`
-   - **Value**: Your Anthropic API key
+   - **Value**: Your API key
+
+#### Step 4: Enable Callbacks
+
+To receive completion webhooks, add a callback token:
+
+1. **Generate Token**: Organization admin creates token at [devsy.ai Settings page](https://devsy.ai)
+2. **Add Secret**: Go to **Settings** → **Secrets and variables** → **Actions**
+3. **Create**: Click **"New repository secret"**
+   - **Name**: `DEVSY_ORG_OAUTH_TOKEN`
+   - **Value**: Token from devsy.ai Settings page
+
+> This enables secure webhook notifications when Devsy completes tasks.
+
+### Custom Setup Script (Recommended)
+
+For projects with dependencies, create a setup script:
+
+```bash
+mkdir -p .devsy
+curl -o .devsy/setup.sh https://raw.githubusercontent.com/DevsyAI/devsy-action/main/setup.sh
+```
+
+Then edit `.devsy/setup.sh` and uncomment the sections you need (Python, Node.js, etc.).
+
+This allows you to add more allowed_tools to use for things like running tests (e.g. Bash(python:*))
 
 ### Alternative Authentication
 
-Instead of an API key, you can use:
+Instead of Anthropic API key, you can use:
 - **AWS Bedrock**: Set `use_bedrock: true` (requires AWS credentials)
 - **Google Vertex**: Set `use_vertex: true` (requires GCP credentials)
-
-## Usage
-
-This action is designed to be triggered remotely via GitHub's workflow_dispatch API:
-
-### Remote Triggering via API
-
-```bash
-# Trigger PR generation for Node.js project
-curl -X POST \
-  -H "Authorization: token $GITHUB_TOKEN" \
-  -H "Accept: application/vnd.github.v3+json" \
-  https://api.github.com/repos/{owner}/{repo}/actions/workflows/devsy-action.yml/dispatches \
-  -d '{
-    "ref": "main",
-    "inputs": {
-      "mode": "pr-gen",
-      "prompt": "Add a new endpoint /api/health that returns {status: ok}",
-      "custom_instructions": "Follow our coding standards",
-      "callback_url": "https://your-app.com/webhook/github-action-complete"
-    }
-  }'
-
-# Trigger PR update
-curl -X POST \
-  -H "Authorization: token $GITHUB_TOKEN" \
-  -H "Accept: application/vnd.github.v3+json" \
-  https://api.github.com/repos/{owner}/{repo}/actions/workflows/devsy-action.yml/dispatches \
-  -d '{
-    "ref": "main",
-    "inputs": {
-      "mode": "pr-update",
-      "pr_number": "456",
-      "prompt": "Address the review feedback about error handling",
-      "callback_url": "https://your-app.com/webhook/github-action-complete"
-    }
-  }'
-
-# Trigger plan generation
-curl -X POST \
-  -H "Authorization: token $GITHUB_TOKEN" \
-  -H "Accept: application/vnd.github.v3+json" \
-  https://api.github.com/repos/{owner}/{repo}/actions/workflows/devsy-action.yml/dispatches \
-  -d '{
-    "ref": "main",
-    "inputs": {
-      "mode": "plan-gen",
-      "prompt": "Create a plan for implementing OAuth2 authentication",
-      "callback_url": "https://your-app.com/webhook/github-action-complete"
-    }
-  }'
-```
-
-### Workflow Definition
-
-Place this in `.github/workflows/devsy-action.yml`:
-
-```yaml
-name: Devsy Action
-
-on:
-  workflow_dispatch:
-    inputs:
-      mode:
-        description: 'Action mode: pr-gen, pr-update, or plan-gen'
-        required: true
-        type: choice
-        options:
-          - pr-gen
-          - pr-update
-          - plan-gen
-      pr_number:
-        description: 'PR number (required for pr-update mode)'
-        required: false
-        type: string
-      prompt:
-        description: 'Prompt for Claude'
-        required: false
-        type: string
-      custom_instructions:
-        description: 'Additional custom instructions'
-        required: false
-        type: string
-      callback_url:
-        description: 'URL to send completion callback'
-        required: false
-        type: string
-
-jobs:
-  run-devsy-action:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: DevsyAI/devsy-action@main
-        id: devsy
-        with:
-          mode: ${{ inputs.mode }}
-          pr_number: ${{ inputs.pr_number }}
-          prompt: ${{ inputs.prompt }}
-          custom_instructions: ${{ inputs.custom_instructions }}
-          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
-```
 
 ## Inputs
 
@@ -269,111 +227,6 @@ When a `callback_url` is provided, the action will send a POST request with the 
   "timestamp": "2024-01-01T12:00:00Z"
 }
 ```
-
-## Examples
-
-### Python Script to Trigger Action
-
-```python
-import requests
-import time
-
-def trigger_devsy_action(
-    repo_owner: str,
-    repo_name: str,
-    github_token: str,
-    mode: str,
-    **inputs
-):
-    """Trigger Devsy Action via GitHub API."""
-    url = f"https://api.github.com/repos/{repo_owner}/{repo_name}/actions/workflows/devsy-action.yml/dispatches"
-
-    headers = {
-        "Authorization": f"token {github_token}",
-        "Accept": "application/vnd.github.v3+json"
-    }
-
-    data = {
-        "ref": "main",
-        "inputs": {
-            "mode": mode,
-            **inputs
-        }
-    }
-
-    response = requests.post(url, json=data, headers=headers)
-    response.raise_for_status()
-
-    # Get run ID from the response
-    # Note: You may need to poll the runs API to get the actual run ID
-    return response
-
-# Example usage
-response = trigger_devsy_action(
-    repo_owner="myorg",
-    repo_name="myrepo",
-    github_token="ghp_...",
-    mode="pr-gen",
-    prompt="Add user authentication with JWT tokens",
-    custom_instructions="Follow TypeScript best practices",
-    callback_url="https://myapp.com/github-webhook"
-)
-```
-
-### Integration with SQS Queue Replacement
-
-```python
-# Instead of sending to SQS:
-# sqs.send_message(QueueUrl=queue_url, MessageBody=json.dumps(task_data))
-
-# Trigger GitHub Action:
-response = trigger_devsy_action(
-    repo_owner=repo_owner,
-    repo_name=repo_name,
-    github_token=github_token,
-    mode="pr-gen",
-    prompt=task_description,
-    callback_url=f"{base_url}/api/github-action-callback/{task_id}"
-)
-```
-
-## Setup and Dependencies
-
-### Custom Setup Script
-
-The action looks for a `.devsy/setup.sh` script in your repository root and runs it before executing Claude Code. This allows you to:
-
-- Install dependencies specific to your project
-- Set up development environment
-- Run build steps or other preparation tasks
-
-Create `.devsy/setup.sh` in your repository:
-
-```bash
-#!/bin/bash
-set -e
-
-echo "Setting up project dependencies..."
-
-# Install Node.js dependencies
-if [ -f "package.json" ]; then
-    npm install
-fi
-
-# Install Python dependencies
-if [ -f "requirements.txt" ]; then
-    pip install -r requirements.txt
-elif [ -f "pyproject.toml" ]; then
-    pip install .
-fi
-
-# Custom build steps
-npm run build
-
-echo "Setup complete!"
-```
-
-**Important**: Make sure your setup script is executable (`chmod +x .devsy/setup.sh`) and includes proper error handling.
 
 ## Customization
 
