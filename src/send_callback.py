@@ -6,6 +6,7 @@ This script sends a POST request to the specified callback URL with the executio
 """
 
 import argparse
+import base64
 import json
 import os
 import sys
@@ -41,12 +42,12 @@ def prepare_callback_data(
     # Read execution file contents
     execution_file_contents = read_execution_file(execution_file)
     
-    # Decode JSON-encoded plan_output if present
+    # Decode base64-encoded plan_output if present
     decoded_plan_output = None
     if plan_output:
         try:
-            decoded_plan_output = json.loads(plan_output)
-        except json.JSONDecodeError as e:
+            decoded_plan_output = base64.b64decode(plan_output).decode('utf-8')
+        except Exception as e:
             print(f"⚠️  Warning: Failed to decode plan_output: {e}")
             decoded_plan_output = plan_output  # Fallback to raw value
     

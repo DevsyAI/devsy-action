@@ -246,21 +246,21 @@ This is a simple plan without markdown delimiters.
 
 
 class TestMainFunction:
-    """Test main function with JSON serialization."""
+    """Test main function with base64 encoding."""
     
-    @patch('subprocess.run')
     @patch('builtins.open', new_callable=mock_open)
     @patch('src.extract_outputs.Path.exists')
-    def test_plan_output_json_serialization(self, mock_exists, mock_file, mock_subprocess):
-        """Test that plan output is JSON serialized using jq."""
+    def test_plan_output_base64_encoding(self, mock_exists, mock_file):
+        """Test that plan output is base64 encoded for shell safety."""
         import json
         import sys
+        import base64
         from src.extract_outputs import main
         
         # Mock file exists
         mock_exists.return_value = True
         
-        # Create test execution data with plan output
+        # Create test execution data with plan output containing shell special characters
         execution_data = {
             "messages": [
                 {
@@ -282,17 +282,6 @@ class TestMainFunction:
         # Mock file read
         mock_file.return_value.read.return_value = json.dumps(execution_data)
         
-        # Mock jq subprocess call
-        def mock_jq_run(cmd, **kwargs):
-            result = MagicMock()
-            input_text = kwargs.get('input', '')
-            # Simulate jq -Rs 'rtrimstr("\n")' behavior
-            result.stdout = json.dumps(input_text.rstrip('\n'))
-            result.returncode = 0
-            return result
-        
-        mock_subprocess.side_effect = mock_jq_run
-        
         # Test arguments
         test_args = ['extract_outputs.py', '--execution-file', 'test.json', '--mode', 'plan-gen']
         
@@ -300,17 +289,21 @@ class TestMainFunction:
             with patch.dict(os.environ, {'GITHUB_OUTPUT': '/tmp/test_output'}):
                 main()
         
-        # Verify jq was called for JSON serialization
-        assert mock_subprocess.called
-        calls = mock_subprocess.call_args_list
+        # Verify that base64 encoding was used
+        write_calls = mock_file.return_value.write.call_args_list
+        plan_output_call = [call for call in write_calls if 'plan_output=' in str(call)]
+        assert len(plan_output_call) > 0
         
-        # Should have one call to jq for plan_output
-        assert len(calls) >= 1
+        # Extract the plan_output value
+        plan_output_line = str(plan_output_call[0])
+        plan_output_value = plan_output_line.split('plan_output=')[1].split('\\n')[0].strip("'\"")
         
-        # Check that jq was called with correct arguments
-        jq_call = calls[0]
-        args, kwargs = jq_call
-        assert args[0] == ['jq', '-Rs', 'rtrimstr("\\n")']
-        assert 'input' in kwargs
-        assert 'quotes' in kwargs['input']
-        assert 'backticks' in kwargs['input']
+        # Verify it's valid base64 and can be decoded
+        try:
+            decoded = base64.b64decode(plan_output_value).decode('utf-8')
+            assert 'quotes' in decoded
+            assert 'backticks' in decoded
+            assert '$variables' in decoded
+        except Exception as e:
+            # If base64 decoding fails, the test should fail
+            assert False, f"Failed to decode base64: {e}"
