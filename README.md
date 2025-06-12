@@ -14,14 +14,14 @@ A GitHub Action that leverages Claude Code to automatically generate pull reques
 
 ### Step 1: Copy the Workflow File
 
-Copy `.github/workflows/devsy.yml.example` to `.github/workflows/devsy.yml` in your repository:
+Copy `devsy.yml` to `.github/workflows/devsy.yml` in your repository:
 
 ```bash
 mkdir -p .github/workflows
-curl -o .github/workflows/devsy.yml https://raw.githubusercontent.com/DevsyAI/devsy-action/main/.github/workflows/devsy.yml.example
+curl -o .github/workflows/devsy.yml https://raw.githubusercontent.com/DevsyAI/devsy-action/main/devsy.yml
 ```
 
-Or manually copy the content from [devsy.yml.example](.github/workflows/devsy.yml.example).
+Or manually copy the content from [devsy.yml](devsy.yml).
 
 ### Step 2: Configure Repository Settings
 
@@ -51,10 +51,10 @@ For projects with dependencies, create a setup script:
 
 ```bash
 mkdir -p .devsy
-curl -o .devsy/setup.sh.example https://raw.githubusercontent.com/DevsyAI/devsy-action/main/.devsy/setup.sh.example
+curl -o .devsy/setup.sh https://raw.githubusercontent.com/DevsyAI/devsy-action/main/setup.sh
 ```
 
-Then copy to `.devsy/setup.sh` and uncomment the sections you need (Python, Node.js, etc.).
+Then edit `.devsy/setup.sh` and uncomment the sections you need (Python, Node.js, etc.).
 
 ### Alternative Authentication
 
