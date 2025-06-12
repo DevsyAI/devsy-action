@@ -45,6 +45,18 @@ Add your Anthropic API key to repository secrets:
 
 ## Optional Setup
 
+### Step 4: Enable Callbacks (Optional)
+
+To receive completion webhooks, add a callback token:
+
+1. **Add Secret**: Go to **Settings** → **Secrets and variables** → **Actions**
+2. **Create**: Click **"New repository secret"**
+   - **Name**: `DEVSY_ORG_OAUTH_TOKEN`
+   - **Value**: Your callback authentication token
+3. **Uncomment**: In your `devsy.yml`, uncomment the callback_auth_token line
+
+> This enables secure webhook notifications when Devsy completes tasks.
+
 ### Custom Setup Script (Optional)
 
 For projects with dependencies, create a setup script:

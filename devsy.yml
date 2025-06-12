@@ -77,7 +77,7 @@ jobs:
           # === Tool Configuration ===
           # Uncomment and modify these based on your project needs:
           # allowed_tools: 'Bash(npm:*),Bash(python:*),Bash(cargo:*)'
-          # disallowed_tools: 'WebFetch,WebSearch'
+          disallowed_tools: ''
           
           # === Callback Configuration ===
           callback_url: ${{ inputs.callback_url }}
