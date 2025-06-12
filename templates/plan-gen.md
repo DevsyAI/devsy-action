@@ -45,4 +45,9 @@ The markdown format should look like:
 ...
 ```
 
-Respond ONLY with the markdown plan. Do not include any other text.
+## Output Format
+Please provide your complete implementation plan between the delimiter blocks:
+
+=== START OF PLAN MARKDOWN ===
+[Your complete implementation plan following the structure above]
+=== END OF PLAN MARKDOWN ===
