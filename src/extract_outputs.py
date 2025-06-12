@@ -2,10 +2,10 @@
 """Extract outputs from Claude's execution results for GitHub Actions."""
 
 import argparse
-import base64
 import json
 import os
 import re
+import subprocess
 import sys
 from pathlib import Path
 
@@ -135,11 +135,18 @@ def main():
             f.write(f"pr_number={outputs.get('pr_number', '')}\n")
             f.write(f"pr_url={outputs.get('pr_url', '')}\n")
             
-            # Base64 encode plan_output to avoid shell parsing issues
+            # JSON serialize plan_output to avoid shell parsing issues
             plan_output = outputs.get('plan_output', '')
             if plan_output:
-                plan_output_b64 = base64.b64encode(plan_output.encode('utf-8')).decode('ascii')
-                f.write(f"plan_output={plan_output_b64}\n")
+                # Use jq for shell-safe JSON serialization
+                plan_output_json = subprocess.run(
+                    ["jq", "-Rs", "rtrimstr(\"\\n\")"],
+                    input=plan_output,
+                    text=True,
+                    capture_output=True,
+                    check=True
+                ).stdout.strip()
+                f.write(f"plan_output={plan_output_json}\n")
             else:
                 f.write(f"plan_output=\n")
 

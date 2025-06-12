@@ -1,6 +1,6 @@
 """Tests for send_callback.py"""
 
-import base64
+import json
 import pytest
 import responses
 import tempfile
@@ -63,11 +63,11 @@ class TestPrepareCallbackData:
         assert result["plan_output"] == "detailed plan"
         assert result["execution_file_contents"] is None  # File doesn't exist
     
-    def test_prepare_callback_data_base64_plan_output(self):
-        """Test preparing callback data with base64-encoded plan output."""
+    def test_prepare_callback_data_json_plan_output(self):
+        """Test preparing callback data with JSON-encoded plan output."""
         # Create a test plan with special characters
         test_plan = "# Plan with special chars\n\n- Step 1: Use `backticks`\n- Step 2: Use \"quotes\"\n- Step 3: Use $variables"
-        encoded_plan = base64.b64encode(test_plan.encode('utf-8')).decode('ascii')
+        encoded_plan = json.dumps(test_plan)
         
         result = prepare_callback_data(
             run_id="123",
@@ -86,10 +86,10 @@ class TestPrepareCallbackData:
         assert '"quotes"' in result["plan_output"]
         assert "$variables" in result["plan_output"]
     
-    def test_prepare_callback_data_invalid_base64(self):
-        """Test handling of invalid base64 input."""
-        # Invalid base64 string
-        invalid_base64 = "not-valid-base64!!!"
+    def test_prepare_callback_data_invalid_json(self):
+        """Test handling of invalid JSON input."""
+        # Invalid JSON string
+        invalid_json = "not-valid-json{{"
         
         result = prepare_callback_data(
             run_id="123",
@@ -98,13 +98,13 @@ class TestPrepareCallbackData:
             conclusion="success",
             pr_number="",
             pr_url="",
-            plan_output=invalid_base64,
+            plan_output=invalid_json,
             execution_file="exec.json",
             token_source="github-actions-bot"
         )
         
         # Should fallback to raw value when decoding fails
-        assert result["plan_output"] == invalid_base64
+        assert result["plan_output"] == invalid_json
 
     def test_timestamp_format(self):
         """Test that timestamp is in correct ISO format."""

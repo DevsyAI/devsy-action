@@ -4,7 +4,7 @@ import json
 import os
 import pytest
 from pathlib import Path
-from unittest.mock import patch, mock_open
+from unittest.mock import patch, mock_open, MagicMock
 from src.extract_outputs import (
     extract_github_urls,
     extract_pr_numbers,
@@ -243,3 +243,74 @@ This is a simple plan without markdown delimiters.
 
 
 # File parsing and main function integration tests removed - covered by manual testing
+
+
+class TestMainFunction:
+    """Test main function with JSON serialization."""
+    
+    @patch('subprocess.run')
+    @patch('builtins.open', new_callable=mock_open)
+    @patch('src.extract_outputs.Path.exists')
+    def test_plan_output_json_serialization(self, mock_exists, mock_file, mock_subprocess):
+        """Test that plan output is JSON serialized using jq."""
+        import json
+        import sys
+        from src.extract_outputs import main
+        
+        # Mock file exists
+        mock_exists.return_value = True
+        
+        # Create test execution data with plan output
+        execution_data = {
+            "messages": [
+                {
+                    "content": """I'll create a plan with special characters.
+                    
+=== START OF PLAN MARKDOWN ===
+# Plan with "quotes" and `backticks`
+
+## Steps
+1. Handle $variables
+2. Process $(commands)
+3. Deal with 'single quotes'
+=== END OF PLAN MARKDOWN ===
+                    """
+                }
+            ]
+        }
+        
+        # Mock file read
+        mock_file.return_value.read.return_value = json.dumps(execution_data)
+        
+        # Mock jq subprocess call
+        def mock_jq_run(cmd, **kwargs):
+            result = MagicMock()
+            input_text = kwargs.get('input', '')
+            # Simulate jq -Rs 'rtrimstr("\n")' behavior
+            result.stdout = json.dumps(input_text.rstrip('\n'))
+            result.returncode = 0
+            return result
+        
+        mock_subprocess.side_effect = mock_jq_run
+        
+        # Test arguments
+        test_args = ['extract_outputs.py', '--execution-file', 'test.json', '--mode', 'plan-gen']
+        
+        with patch.object(sys, 'argv', test_args):
+            with patch.dict(os.environ, {'GITHUB_OUTPUT': '/tmp/test_output'}):
+                main()
+        
+        # Verify jq was called for JSON serialization
+        assert mock_subprocess.called
+        calls = mock_subprocess.call_args_list
+        
+        # Should have one call to jq for plan_output
+        assert len(calls) >= 1
+        
+        # Check that jq was called with correct arguments
+        jq_call = calls[0]
+        args, kwargs = jq_call
+        assert args[0] == ['jq', '-Rs', 'rtrimstr("\\n")']
+        assert 'input' in kwargs
+        assert 'quotes' in kwargs['input']
+        assert 'backticks' in kwargs['input']
