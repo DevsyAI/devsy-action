@@ -1,8 +1,6 @@
 #!/usr/bin/env python3
 """Prepare the prompt for Claude Code based on the action mode."""
 
-import argparse
-import base64
 import json
 import os
 import sys
@@ -123,68 +121,65 @@ def prepare_plan_gen_prompt(user_prompt, custom_instructions, repo_name, base_br
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Prepare prompt for Claude Code")
-    parser.add_argument("--mode", required=True, choices=["pr-gen", "pr-update", "plan-gen"])
-    parser.add_argument("--pr-number", type=int)
-    parser.add_argument("--prompt")
-    parser.add_argument("--prompt-b64", help="Base64-encoded prompt to avoid shell parsing issues")
-    parser.add_argument("--prompt-file")
-    parser.add_argument("--custom-instructions", default="")
-    parser.add_argument("--custom-instructions-b64", help="Base64-encoded custom instructions")
-    parser.add_argument("--github-token", required=True)
-    parser.add_argument("--repo", required=True)
-    parser.add_argument("--base-branch", default="main")
-
-    args = parser.parse_args()
-
-    # Decode base64-encoded prompt if provided, otherwise use regular prompt
-    user_prompt = ""
-    if args.prompt_b64:
-        try:
-            user_prompt = base64.b64decode(args.prompt_b64).decode('utf-8')
-        except Exception as e:
-            print(f"Error decoding base64 prompt: {e}", file=sys.stderr)
-            sys.exit(1)
-    elif args.prompt:
-        user_prompt = args.prompt
+    # Read all parameters from environment variables
+    mode = os.environ.get("DEVSY_MODE", "")
+    pr_number_str = os.environ.get("DEVSY_PR_NUMBER", "")
+    prompt = os.environ.get("DEVSY_PROMPT", "")
+    prompt_file = os.environ.get("DEVSY_PROMPT_FILE", "")
+    custom_instructions = os.environ.get("DEVSY_CUSTOM_INSTRUCTIONS", "")
+    github_token = os.environ.get("DEVSY_GITHUB_TOKEN", "")
+    repo = os.environ.get("DEVSY_REPO", "")
+    base_branch = os.environ.get("DEVSY_BASE_BRANCH", "main")
     
-    # Read prompt from file if provided (overrides other prompt sources)
-    if args.prompt_file and os.path.exists(args.prompt_file):
-        with open(args.prompt_file, "r") as f:
-            user_prompt = f.read().strip()
-
-    # Decode base64-encoded custom instructions if provided
-    custom_instructions = ""
-    if args.custom_instructions_b64:
+    # Validate required parameters
+    if not mode:
+        print("Error: DEVSY_MODE environment variable is required")
+        sys.exit(1)
+    if not github_token:
+        print("Error: DEVSY_GITHUB_TOKEN environment variable is required")
+        sys.exit(1)
+    if not repo:
+        print("Error: DEVSY_REPO environment variable is required")
+        sys.exit(1)
+    
+    # Parse PR number if provided
+    pr_number = None
+    if pr_number_str:
         try:
-            custom_instructions = base64.b64decode(args.custom_instructions_b64).decode('utf-8')
-        except Exception as e:
-            print(f"Error decoding base64 custom instructions: {e}", file=sys.stderr)
+            pr_number = int(pr_number_str)
+        except ValueError:
+            print(f"Error: Invalid PR number: {pr_number_str}")
             sys.exit(1)
-    elif args.custom_instructions:
-        custom_instructions = args.custom_instructions
+    
+    # Get user prompt from environment or file
+    user_prompt = prompt
+    
+    # Read prompt from file if provided (overrides environment prompt)
+    if prompt_file and os.path.exists(prompt_file):
+        with open(prompt_file, "r") as f:
+            user_prompt = f.read().strip()
 
     try:
         # Load mode-specific system prompt
-        system_prompt = load_template(f"system-prompt-{args.mode}")
+        system_prompt = load_template(f"system-prompt-{mode}")
 
         # Prepare user prompt based on mode
-        if args.mode == "pr-gen":
+        if mode == "pr-gen":
             user_prompt_formatted = prepare_pr_gen_prompt(
-                user_prompt, custom_instructions, args.repo, args.base_branch
+                user_prompt, custom_instructions, repo, base_branch
             )
-        elif args.mode == "pr-update":
+        elif mode == "pr-update":
             user_prompt_formatted = prepare_pr_update_prompt(
-                args.pr_number,
-                args.repo,
-                args.github_token,
+                pr_number,
+                repo,
+                github_token,
                 custom_instructions,
                 user_prompt,
-                args.base_branch,
+                base_branch,
             )
-        elif args.mode == "plan-gen":
+        elif mode == "plan-gen":
             user_prompt_formatted = prepare_plan_gen_prompt(
-                user_prompt, custom_instructions, args.repo, args.base_branch
+                user_prompt, custom_instructions, repo, base_branch
             )
 
         # Output for GitHub Actions using JSON serialization for shell safety

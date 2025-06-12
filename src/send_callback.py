@@ -5,7 +5,6 @@ Send callback notification with execution results.
 This script sends a POST request to the specified callback URL with the execution results.
 """
 
-import argparse
 import base64
 import json
 import os
@@ -110,49 +109,73 @@ def send_callback(
 
 def main() -> None:
     """Main function to send callback notification."""
-    parser = argparse.ArgumentParser(description="Send callback notification")
-    parser.add_argument("--callback-url", required=True, help="Callback URL")
-    parser.add_argument("--run-id", required=True, help="GitHub run ID")
-    parser.add_argument("--run-url", required=True, help="GitHub run URL")
-    parser.add_argument("--mode", required=True, help="Action mode")
-    parser.add_argument("--conclusion", required=True, help="Execution conclusion")
-    parser.add_argument("--pr-number", default="", help="PR number")
-    parser.add_argument("--pr-url", default="", help="PR URL")
-    parser.add_argument("--plan-output", default="", help="Plan output")
-    parser.add_argument("--execution-file", required=True, help="Execution file path")
-    parser.add_argument("--token-source", required=True, help="Token source")
-    parser.add_argument("--auth-token", default="", help="Authentication token")
-    parser.add_argument("--auth-header", default="", help="Authentication header name")
-    parser.add_argument("--repository", required=True, help="GitHub repository")
-
-    args = parser.parse_args()
+    # Read all parameters from environment variables
+    callback_url = os.environ.get("DEVSY_CALLBACK_URL", "")
+    run_id = os.environ.get("DEVSY_RUN_ID", "")
+    run_url = os.environ.get("DEVSY_RUN_URL", "")
+    mode = os.environ.get("DEVSY_MODE", "")
+    conclusion = os.environ.get("DEVSY_CONCLUSION", "")
+    pr_number = os.environ.get("DEVSY_PR_NUMBER", "")
+    pr_url = os.environ.get("DEVSY_PR_URL", "")
+    plan_output = os.environ.get("DEVSY_PLAN_OUTPUT", "")
+    execution_file = os.environ.get("DEVSY_EXECUTION_FILE", "")
+    token_source = os.environ.get("DEVSY_TOKEN_SOURCE", "")
+    auth_token = os.environ.get("DEVSY_AUTH_TOKEN", "")
+    auth_header = os.environ.get("DEVSY_AUTH_HEADER", "")
+    repository = os.environ.get("DEVSY_REPOSITORY", "")
+    
+    # Validate required parameters
+    if not callback_url:
+        print("Error: DEVSY_CALLBACK_URL environment variable is required")
+        sys.exit(1)
+    if not run_id:
+        print("Error: DEVSY_RUN_ID environment variable is required")
+        sys.exit(1)
+    if not run_url:
+        print("Error: DEVSY_RUN_URL environment variable is required")
+        sys.exit(1)
+    if not mode:
+        print("Error: DEVSY_MODE environment variable is required")
+        sys.exit(1)
+    if not conclusion:
+        print("Error: DEVSY_CONCLUSION environment variable is required")
+        sys.exit(1)
+    if not execution_file:
+        print("Error: DEVSY_EXECUTION_FILE environment variable is required")
+        sys.exit(1)
+    if not token_source:
+        print("Error: DEVSY_TOKEN_SOURCE environment variable is required")
+        sys.exit(1)
+    if not repository:
+        print("Error: DEVSY_REPOSITORY environment variable is required")
+        sys.exit(1)
 
     # Prepare callback data
     callback_data = prepare_callback_data(
-        args.run_id,
-        args.run_url,
-        args.mode,
-        args.conclusion,
-        args.pr_number,
-        args.pr_url,
-        args.plan_output,
-        args.execution_file,
-        args.token_source,
+        run_id,
+        run_url,
+        mode,
+        conclusion,
+        pr_number,
+        pr_url,
+        plan_output,
+        execution_file,
+        token_source,
     )
 
     # Prepare headers
     headers = prepare_headers(
-        args.auth_token, args.auth_header, args.run_id, args.repository
+        auth_token, auth_header, run_id, repository
     )
 
     # Log callback attempt
-    if args.auth_token:
-        print(f"📤 Sending authenticated callback to {args.callback_url}")
+    if auth_token:
+        print(f"📤 Sending authenticated callback to {callback_url}")
     else:
-        print(f"📤 Sending callback to {args.callback_url}")
+        print(f"📤 Sending callback to {callback_url}")
 
     # Send callback
-    success = send_callback(args.callback_url, callback_data, headers)
+    success = send_callback(callback_url, callback_data, headers)
     
     # Exit with appropriate code (but don't fail the action on callback failure)
     sys.exit(0)

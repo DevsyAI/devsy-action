@@ -132,54 +132,31 @@ runs:
 
     - name: Validate inputs
       shell: bash
+      env:
+        DEVSY_MODE: ${{ inputs.mode }}
+        DEVSY_ANTHROPIC_API_KEY: ${{ inputs.anthropic_api_key }}
+        DEVSY_USE_BEDROCK: ${{ inputs.use_bedrock }}
+        DEVSY_USE_VERTEX: ${{ inputs.use_vertex }}
+        DEVSY_PROMPT: ${{ inputs.prompt }}
+        DEVSY_PROMPT_FILE: ${{ inputs.prompt_file }}
+        DEVSY_PR_NUMBER: ${{ inputs.pr_number }}
       run: |
-        # Base64 encode prompt to avoid shell parsing issues
-        PROMPT_B64=""
-        if [[ -n "${{ inputs.prompt }}" ]]; then
-          PROMPT_B64=$(echo -n "${{ inputs.prompt }}" | base64 -w 0)
-        fi
-        
-        /tmp/devsy-action-env/bin/python ${{ github.action_path }}/src/validate_inputs.py \
-          --mode "${{ inputs.mode }}" \
-          --anthropic-api-key "${{ inputs.anthropic_api_key }}" \
-          --use-bedrock "${{ inputs.use_bedrock }}" \
-          --use-vertex "${{ inputs.use_vertex }}" \
-          --prompt-b64 "$PROMPT_B64" \
-          --prompt-file "${{ inputs.prompt_file }}" \
-          --pr-number "${{ inputs.pr_number }}"
+        /tmp/devsy-action-env/bin/python ${{ github.action_path }}/src/validate_inputs.py
 
     - name: Prepare prompt
       id: prepare_prompt
       shell: bash
+      env:
+        DEVSY_MODE: ${{ inputs.mode }}
+        DEVSY_PROMPT: ${{ inputs.prompt }}
+        DEVSY_PROMPT_FILE: ${{ inputs.prompt_file }}
+        DEVSY_CUSTOM_INSTRUCTIONS: ${{ inputs.custom_instructions }}
+        DEVSY_GITHUB_TOKEN: ${{ github.token }}
+        DEVSY_REPO: ${{ github.repository }}
+        DEVSY_BASE_BRANCH: ${{ inputs.base_branch }}
+        DEVSY_PR_NUMBER: ${{ inputs.pr_number }}
       run: |
-        # Base64 encode prompt inputs to avoid shell parsing issues with special characters
-        PROMPT_B64=""
-        if [[ -n "${{ inputs.prompt }}" ]]; then
-          PROMPT_B64=$(echo -n "${{ inputs.prompt }}" | base64 -w 0)
-        fi
-        
-        CUSTOM_INSTRUCTIONS_B64=""
-        if [[ -n "${{ inputs.custom_instructions }}" ]]; then
-          CUSTOM_INSTRUCTIONS_B64=$(echo -n "${{ inputs.custom_instructions }}" | base64 -w 0)
-        fi
-        
-        # Set up the arguments with base64-encoded inputs
-        args=(
-          "--mode" "${{ inputs.mode }}"
-          "--prompt-b64" "$PROMPT_B64"
-          "--prompt-file" "${{ inputs.prompt_file }}"
-          "--custom-instructions-b64" "$CUSTOM_INSTRUCTIONS_B64"
-          "--github-token" "${{ github.token }}"
-          "--repo" "${{ github.repository }}"
-          "--base-branch" "${{ inputs.base_branch }}"
-        )
-
-        # Only add pr-number if it's not empty
-        if [[ -n "${{ inputs.pr_number }}" ]]; then
-          args+=("--pr-number" "${{ inputs.pr_number }}")
-        fi
-
-        /tmp/devsy-action-env/bin/python ${{ github.action_path }}/src/prepare_prompt.py "${args[@]}"
+        /tmp/devsy-action-env/bin/python ${{ github.action_path }}/src/prepare_prompt.py
 
     - name: Exchange for devsy-bot GitHub App token
       id: token_exchange
@@ -258,18 +235,19 @@ runs:
     - name: Send callback notification
       if: inputs.callback_url != ''
       shell: bash
+      env:
+        DEVSY_CALLBACK_URL: ${{ inputs.callback_url }}
+        DEVSY_RUN_ID: ${{ github.run_id }}
+        DEVSY_RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        DEVSY_MODE: ${{ inputs.mode }}
+        DEVSY_CONCLUSION: ${{ steps.run_claude.outputs.conclusion }}
+        DEVSY_PR_NUMBER: ${{ steps.extract_outputs.outputs.pr_number }}
+        DEVSY_PR_URL: ${{ steps.extract_outputs.outputs.pr_url }}
+        DEVSY_PLAN_OUTPUT: ${{ steps.extract_outputs.outputs.plan_output }}
+        DEVSY_EXECUTION_FILE: ${{ steps.run_claude.outputs.execution_file }}
+        DEVSY_TOKEN_SOURCE: ${{ steps.token_exchange.outputs.token_source }}
+        DEVSY_AUTH_TOKEN: ${{ inputs.callback_auth_token }}
+        DEVSY_AUTH_HEADER: ${{ inputs.callback_auth_header }}
+        DEVSY_REPOSITORY: ${{ github.repository }}
       run: |
-        /tmp/devsy-action-env/bin/python ${{ github.action_path }}/src/send_callback.py \
-          --callback-url "${{ inputs.callback_url }}" \
-          --run-id "${{ github.run_id }}" \
-          --run-url "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}" \
-          --mode "${{ inputs.mode }}" \
-          --conclusion "${{ steps.run_claude.outputs.conclusion }}" \
-          --pr-number "${{ steps.extract_outputs.outputs.pr_number }}" \
-          --pr-url "${{ steps.extract_outputs.outputs.pr_url }}" \
-          --plan-output "${{ steps.extract_outputs.outputs.plan_output }}" \
-          --execution-file "${{ steps.run_claude.outputs.execution_file }}" \
-          --token-source "${{ steps.token_exchange.outputs.token_source }}" \
-          --auth-token "${{ inputs.callback_auth_token }}" \
-          --auth-header "${{ inputs.callback_auth_header }}" \
-          --repository "${{ github.repository }}"
+        /tmp/devsy-action-env/bin/python ${{ github.action_path }}/src/send_callback.py

@@ -5,8 +5,7 @@ Validate inputs for the Devsy Action.
 This script validates the required inputs for different modes and authentication methods.
 """
 
-import argparse
-import base64
+import os
 import sys
 from typing import List
 
@@ -56,33 +55,24 @@ def validate_mode_requirements(
 
 def main() -> None:
     """Main validation function."""
-    parser = argparse.ArgumentParser(description="Validate Devsy Action inputs")
-    parser.add_argument("--mode", required=True, help="Action mode")
-    parser.add_argument("--anthropic-api-key", default="", help="Anthropic API key")
-    parser.add_argument("--use-bedrock", default="false", help="Use AWS Bedrock")
-    parser.add_argument("--use-vertex", default="false", help="Use Google Vertex")
-    parser.add_argument("--prompt", default="", help="User prompt")
-    parser.add_argument("--prompt-b64", default="", help="Base64-encoded user prompt")
-    parser.add_argument("--prompt-file", default="", help="Prompt file path")
-    parser.add_argument("--pr-number", default="", help="PR number for updates")
-
-    args = parser.parse_args()
-
-    # Decode base64-encoded prompt if provided, otherwise use regular prompt
-    prompt = ""
-    if args.prompt_b64:
-        try:
-            prompt = base64.b64decode(args.prompt_b64).decode('utf-8')
-        except Exception as e:
-            print(f"Error decoding base64 prompt: {e}", file=sys.stderr)
-            sys.exit(1)
-    elif args.prompt:
-        prompt = args.prompt
+    # Read all parameters from environment variables
+    mode = os.environ.get("DEVSY_MODE", "")
+    anthropic_api_key = os.environ.get("DEVSY_ANTHROPIC_API_KEY", "")
+    use_bedrock = os.environ.get("DEVSY_USE_BEDROCK", "false")
+    use_vertex = os.environ.get("DEVSY_USE_VERTEX", "false")
+    prompt = os.environ.get("DEVSY_PROMPT", "")
+    prompt_file = os.environ.get("DEVSY_PROMPT_FILE", "")
+    pr_number = os.environ.get("DEVSY_PR_NUMBER", "")
+    
+    # Validate mode is provided
+    if not mode:
+        print("Error: DEVSY_MODE environment variable is required")
+        sys.exit(1)
 
     # Run all validations
-    validate_mode(args.mode)
-    validate_authentication(args.anthropic_api_key, args.use_bedrock, args.use_vertex)
-    validate_mode_requirements(args.mode, prompt, args.prompt_file, args.pr_number)
+    validate_mode(mode)
+    validate_authentication(anthropic_api_key, use_bedrock, use_vertex)
+    validate_mode_requirements(mode, prompt, prompt_file, pr_number)
 
     print("✅ All input validations passed")
 

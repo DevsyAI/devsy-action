@@ -152,18 +152,17 @@ class TestPreparePrompt:
         from src.prepare_prompt import main
         import sys
         
-        test_args = [
-            'prepare_prompt.py',
-            '--mode', 'pr-gen',
-            '--prompt', test_prompt,
-            '--github-token', 'fake-token',
-            '--repo', 'test/repo',
-            '--base-branch', 'main'
-        ]
+        env_vars = {
+            'DEVSY_MODE': 'pr-gen',
+            'DEVSY_PROMPT': test_prompt,
+            'DEVSY_GITHUB_TOKEN': 'fake-token',
+            'DEVSY_REPO': 'test/repo',
+            'DEVSY_BASE_BRANCH': 'main',
+            'GITHUB_OUTPUT': '/tmp/test_output'
+        }
         
-        with patch.object(sys, 'argv', test_args):
-            with patch.dict(os.environ, {'GITHUB_OUTPUT': '/tmp/test_output'}):
-                main()
+        with patch.dict(os.environ, env_vars):
+            main()
         
         # Verify subprocess was called with jq for JSON serialization
         assert mock_subprocess.called
@@ -231,14 +230,13 @@ Fourth line with $variables"""
         from src.prepare_prompt import main
         import sys
         
-        test_args = [
-            'prepare_prompt.py',
-            '--mode', 'pr-gen',
-            '--prompt', 'test',
-            '--github-token', 'fake-token',
-            '--repo', 'test/repo'
-        ]
+        env_vars = {
+            'DEVSY_MODE': 'pr-gen',
+            'DEVSY_PROMPT': 'test',
+            'DEVSY_GITHUB_TOKEN': 'fake-token',
+            'DEVSY_REPO': 'test/repo'
+        }
         
-        with patch.object(sys, 'argv', test_args):
+        with patch.dict(os.environ, env_vars):
             with pytest.raises(SystemExit):
                 main()
