@@ -10,9 +10,23 @@ A GitHub Action that leverages Claude Code to automatically generate pull reques
 - **Remote Triggering**: Designed for `workflow_dispatch` to be called programmatically
 - **Callback Support**: Optional webhook callback when execution completes
 
-## Quick Setup (3 Steps)
+## Quick Setup 
 
-### Step 1: Copy the Workflow File
+### One-Command Install
+
+Run this in your repository root:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/DevsyAI/devsy-action/main/install-devsy.sh | bash
+```
+
+This automatically creates the workflow file and optionally sets up a dependency script.
+
+### Manual Setup (3 Steps)
+
+If you prefer manual setup:
+
+#### Step 1: Copy the Workflow File
 
 Copy `devsy.yml` to `.github/workflows/devsy.yml` in your repository:
 
@@ -23,7 +37,7 @@ curl -o .github/workflows/devsy.yml https://raw.githubusercontent.com/DevsyAI/de
 
 Or manually copy the content from [devsy.yml](devsy.yml).
 
-### Step 2: Configure Repository Settings
+#### Step 2: Configure Repository Settings
 
 Enable GitHub Actions to create pull requests:
 
@@ -33,7 +47,7 @@ Enable GitHub Actions to create pull requests:
 
 > **For Organization Repos**: You must enable this setting at the organization level first, then at the repository level.
 
-### Step 3: Add Your API Key
+#### Step 3: Add Your API Key
 
 Add your Anthropic API key to repository secrets:
 
@@ -45,7 +59,7 @@ Add your Anthropic API key to repository secrets:
 
 ## Optional Setup
 
-### Step 4: Enable Callbacks (Optional)
+#### Step 4: Enable Callbacks (Optional)
 
 To receive completion webhooks, add a callback token:
 
