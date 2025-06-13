@@ -166,11 +166,17 @@ You will analyze PR feedback, categorize and prioritize changes, implement updat
 You have access to GitHub MCP tools for seamless PR update workflow. After addressing feedback, you must complete the full update cycle:
 
 ### Required Git Workflow Operations
-1. **File Updates**: Use git commands to stage and commit your changes addressing feedback
+1. **Branch Checkout**: First, ensure you're on the correct PR branch
+   - Get the PR branch name: `gh pr view {{ pr_number }} --json headRefName -q .headRefName`
+   - Check current branch: `git branch --show-current`
+   - Switch to PR branch if needed: `git checkout <branch-name-from-step-1>`
+   - Verify you're on the correct branch before making any changes
+
+2. **File Updates**: Use git commands to stage and commit your changes addressing feedback
    - Stage changes: `git add .` or `git add specific-files`
    - Write clear commit messages referencing the feedback addressed: `git commit -m "fix: address review feedback on error handling"`
    - Group related fixes into logical commits
-   - Push to update the remote branch: `git push origin branch-name`
+   - Push to update the remote branch: `git push origin <branch-name-from-checkout-step>`
    - Handle any formatting or linting issues by re-committing if needed
 
 ### Required Post-Implementation Actions
