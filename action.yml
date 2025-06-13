@@ -131,8 +131,6 @@ runs:
     - name: Configure Git identity
       shell: bash
       run: |
-        git config --global user.email "no-reply@devsy.ai"
-        git config --global user.name "Devsy Bot"
         # Configure Git to use HTTPS instead of SSH for GitHub repositories
         # This enables pip to install private GitHub packages using the GitHub token
         git config --global url."https://github.com/".insteadOf git@github.com:
