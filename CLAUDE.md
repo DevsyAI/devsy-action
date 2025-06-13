@@ -66,7 +66,7 @@ devsy-action/
 
 ### Tool Configuration
 Base tools always included:
-- File operations: Edit, Read, Write, Glob, Grep, LS
+- File operations: Edit, MultiEdit, Read, Write, Glob, Grep, LS
 - Git commands: All git operations via Bash(git:*)
 - Search: Ripgrep via Bash(rg:*)
 - Task management: Task, TodoWrite, TodoRead

@@ -14,6 +14,7 @@ def get_base_tools() -> str:
     """Get the base set of tools that are always included."""
     base_tools = [
         "Edit",
+        "MultiEdit",
         "Read", 
         "Write",
         "Glob",

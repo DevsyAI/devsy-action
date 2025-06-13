@@ -20,6 +20,7 @@ class TestGetBaseTools:
         result = get_base_tools()
         expected_tools = [
             "Edit",
+            "MultiEdit",
             "Read",
             "Write",
             "Bash(git:*)",
