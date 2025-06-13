@@ -38,7 +38,8 @@ Address all review feedback professionally and thoroughly. Treat this as an oppo
 - Ensure no regressions were introduced
 - Run tests to validate changes (if available in your environment)
 - Self-review as if you were a new reviewer
-- Commit changes using GitHub MCP tools with clear feedback references
+- **CRITICAL**: Commit ALL changes using GitHub MCP tools with clear feedback references
+- **Verify working directory is clean** (`git status`) before completing
 
 {{ custom_instructions }}
 
@@ -49,5 +50,7 @@ Address all review feedback professionally and thoroughly. Treat this as an oppo
 - ✅ Tests pass (if runnable)
 - ✅ Implementation follows established patterns
 - ✅ PR still accomplishes its original goals
+- ✅ **ALL changes committed completely** (working directory clean)
+- ✅ Pre-commit hooks handled properly if they modify files
 - ✅ Changes committed with descriptive messages referencing feedback
 - ✅ Review responses provided where needed

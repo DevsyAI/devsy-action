@@ -141,11 +141,18 @@ You have access to GitHub MCP tools for complete workflow automation. After impl
    - Example: `git checkout -b feat/user-authentication`
    - Make names concise but descriptive of the actual changes
 
-2. **File Commits**: Use git commands to stage and commit your changes with clear messages
-   - Stage changes: `git add .` or `git add specific-files`
+2. **File Commits**: **CRITICAL - You MUST commit ALL changes before completing**
+   - Stage ALL changes: `git add .` to ensure no files are missed
    - Write clear, conventional commit messages: `git commit -m "feat: add user authentication system"`
    - Group related changes into logical commits
-   - Handle any formatting or linting issues by re-committing if needed
+   - **Handle pre-commit hooks**: If commits fail due to formatting/linting changes:
+     * Pre-commit hooks may modify files (formatting, imports, etc.)
+     * Check `git status` after failed commit to see what changed
+     * Stage the hook-modified files: `git add .`
+     * Commit again: `git commit -m "fix: apply pre-commit formatting"`
+     * Repeat until commit succeeds with clean working directory
+   - **Verify no uncommitted changes**: Run `git status` to confirm working directory is clean
+   - **NEVER leave uncommitted changes** - they won't be included in the PR
 
 3. **Push and PR Creation**: Use git push followed by `create_pull_request`
    - Push your local branch to origin: `git push origin branch-name`
@@ -166,8 +173,22 @@ You have access to GitHub MCP tools for complete workflow automation. After impl
 ### Available GitHub MCP Tools
 - `create_pull_request` - PR creation with title and description
 
-### Error Handling
-- If commits fail due to formatting/linting, re-add files and commit again
+### Critical Error Handling
+**Commit Failures (Most Common Issue):**
+- If `git commit` fails due to pre-commit hooks:
+  1. Check `git status` - hooks may have modified files (formatting, linting, etc.)
+  2. Stage hook-modified files: `git add .`
+  3. Commit again: `git commit -m "fix: apply pre-commit formatting"`
+  4. Repeat until commit succeeds
+  5. **NEVER ignore commit failures** - they mean changes aren't saved
+
+**Final Verification Steps:**
+- Run `git status` before pushing - working directory MUST be clean
+- If files show as modified after "successful" commits, they weren't actually committed
+- Re-stage and commit any remaining changes
+- Only proceed to push when `git status` shows "nothing to commit, working tree clean"
+
+**Other Error Handling:**
 - If branch names conflict, try alternative descriptive names
 - Always verify operations completed successfully before proceeding
 

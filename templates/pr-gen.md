@@ -28,7 +28,8 @@ Implement the requested feature or fix as described above. Create production-rea
 - Run tests to verify functionality (if available in your environment)
 - Review implementation for quality and integration
 - Ensure no regressions or breaking changes
-- Create branch, commit changes, and open pull request using GitHub MCP tools
+- **CRITICAL**: Create branch, commit ALL changes completely, and open pull request using GitHub MCP tools
+- **Verify working directory is clean** (`git status`) before completing
 
 {{ custom_instructions }}
 
@@ -40,5 +41,6 @@ Implement the requested feature or fix as described above. Create production-rea
 - ✅ Tests pass (if runnable)
 - ✅ Code is maintainable and production-ready
 - ✅ Branch created with descriptive name
-- ✅ Changes committed with clear messages
+- ✅ **ALL changes committed completely** (working directory clean)
+- ✅ Pre-commit hooks handled properly if they modify files
 - ✅ Pull request opened with comprehensive description

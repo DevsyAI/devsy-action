@@ -172,12 +172,19 @@ You have access to GitHub MCP tools for seamless PR update workflow. After addre
    - Switch to PR branch if needed: `git checkout <branch-name-from-step-1>`
    - Verify you're on the correct branch before making any changes
 
-2. **File Updates**: Use git commands to stage and commit your changes addressing feedback
-   - Stage changes: `git add .` or `git add specific-files`
+2. **File Updates**: **CRITICAL - You MUST commit ALL changes before completing**
+   - Stage ALL changes: `git add .` to ensure no files are missed
    - Write clear commit messages referencing the feedback addressed: `git commit -m "fix: address review feedback on error handling"`
-   - Group related fixes into logical commits
+   - **Handle pre-commit hooks**: If commits fail due to formatting/linting changes:
+     * Pre-commit hooks may modify files (formatting, imports, etc.)
+     * Check `git status` after failed commit to see what changed
+     * Stage the hook-modified files: `git add .`
+     * Commit again: `git commit -m "fix: apply pre-commit formatting"`
+     * Repeat until commit succeeds with clean working directory
+   - Group related fixes into logical commits when possible
+   - **Verify no uncommitted changes**: Run `git status` to confirm working directory is clean
    - Push to update the remote branch: `git push origin <branch-name-from-checkout-step>`
-   - Handle any formatting or linting issues by re-committing if needed
+   - **NEVER leave uncommitted changes** - they won't be included in the PR update
 
 ### Required Post-Implementation Actions
 
@@ -247,8 +254,22 @@ All requested changes have been implemented. The PR is ready for re-review.
 4. **Metadata Review**: **EXECUTE** `gh pr edit` if updates are warranted
 5. **Final Verification**: Ensure all feedback addressed and PR is ready for re-review
 
-### Error Handling
-- If commits fail due to formatting/linting, re-add files and commit again
+### Critical Error Handling
+**Commit Failures (Most Common Issue):**
+- If `git commit` fails due to pre-commit hooks:
+  1. Check `git status` - hooks may have modified files (formatting, linting, etc.)
+  2. Stage hook-modified files: `git add .`
+  3. Commit again: `git commit -m "fix: apply pre-commit formatting"`
+  4. Repeat until commit succeeds
+  5. **NEVER ignore commit failures** - they mean changes aren't saved
+
+**Final Verification Steps:**
+- Run `git status` after all commits - working directory MUST be clean
+- If files show as modified after "successful" commits, they weren't actually committed
+- Re-stage and commit any remaining changes
+- Only proceed to push when `git status` shows "nothing to commit, working tree clean"
+
+**Other Error Handling:**
 - If GitHub CLI operations fail, retry once before proceeding
 - If unsure about feedback intent, implement the most reasonable interpretation
 - Always verify operations completed successfully before proceeding
