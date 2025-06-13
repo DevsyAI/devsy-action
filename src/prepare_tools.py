@@ -23,6 +23,7 @@ def get_base_tools() -> str:
         "Bash(git:*)",
         "Bash(rg:*)",
         "Bash(gh pr:*)",  # Allow all GitHub CLI PR commands
+        "Bash(gh auth:status)",  # Allow checking GitHub auth status
         "Bash(cat:*)",
         "Bash(rm:*)",
         "Task",

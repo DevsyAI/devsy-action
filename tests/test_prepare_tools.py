@@ -24,7 +24,8 @@ class TestGetBaseTools:
             "Read",
             "Write",
             "Bash(git:*)",
-            "Bash(gh pr:*)"  # Updated to match PR-specific pattern
+            "Bash(gh pr:*)",  # Updated to match PR-specific pattern
+            "Bash(gh auth:status)"
         ]
         for tool in expected_tools:
             assert tool in result
