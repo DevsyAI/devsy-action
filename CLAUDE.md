@@ -69,15 +69,14 @@ devsy-action/
 
 ### Tool Configuration
 Base tools always included:
-- File operations: Edit, MultiEdit, Read, Write, Glob, Grep, LS
+- File operations: Edit, MultiEdit, Read, Write, Glob, Grep, LS, Bash(mv:*), Bash(rm:*), Bash(cat:*)
 - Git commands: All git operations via Bash(git:*)
 - Search: Ripgrep via Bash(rg:*), find via Bash(find:*)
 - Task management: Task, TodoWrite, TodoRead
-- GitHub integration: Bash(gh pr:*)
+- GitHub integration: Bash(gh pr:*), Bash(gh auth:status)
 
 MCP tools for PR updates (pr-update mode only):
-- mcp__github-file-ops__commit_files - Direct GitHub API commits that trigger checks
-- mcp__github-file-ops__delete_files - Direct GitHub API file deletions
+- mcp__github-file-ops__push_changes - Push file changes via GitHub API (simulates git add/rm/commit/push)
 
 Default disallowed tools:
 - WebFetch - Web content fetching

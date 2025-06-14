@@ -31,6 +31,7 @@ def get_base_tools(mode: str = None) -> str:
         "Bash(cat:*)",
         "Bash(rm:*)",
         "Bash(find:*)",  # Allow find commands for file searching
+        "Bash(mv:*)",    # Allow move/rename commands
         "Task",
         "TodoWrite",
         "TodoRead",
@@ -39,8 +40,7 @@ def get_base_tools(mode: str = None) -> str:
     # Add MCP GitHub file operations tools for pr-update mode
     if mode == "pr-update":
         base_tools.extend([
-            "mcp__github-file-ops__commit_files",
-            "mcp__github-file-ops__delete_files"
+            "mcp__github-file-ops__push_changes"
         ])
     
     return ",".join(base_tools)
