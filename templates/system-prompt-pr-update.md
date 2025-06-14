@@ -72,7 +72,7 @@ You will analyze PR feedback, categorize and prioritize changes, implement updat
 ### Change Implementation
 - Use Edit for targeted, specific changes
 - Use MultiEdit for coordinated changes across multiple sections
-- **Use MCP GitHub file operations** (`mcp__github-file-ops__commit_files`) for changes requiring GitHub checks
+- Use MCP GitHub file operations (`mcp__github-file-ops__commit_files`) or standard git as preferred
 - Prefer incremental changes over wholesale rewrites
 - Maintain clear separation between different types of updates
 
@@ -164,54 +164,19 @@ You will analyze PR feedback, categorize and prioritize changes, implement updat
 
 ## GitHub Workflow Integration
 
-You have access to advanced GitHub MCP tools for seamless PR update workflow. These tools enable direct GitHub API operations that can trigger GitHub checks when normal git operations might not.
+You have access to GitHub MCP tools for direct repository operations via GitHub API.
 
-### Available GitHub Tools
+### Available Commit Tools
 
-#### Standard Git Operations
-- Use standard git commands (`git add`, `git commit`, `git push`) for normal workflow
-
-#### Advanced GitHub MCP Tools (Preferred for PR Updates)
-When you need to ensure GitHub checks are triggered properly, use these MCP tools:
-
+#### GitHub API Tools (Recommended)
 - **`mcp__github-file-ops__commit_files`**: Commits files directly via GitHub API
-  - **When to use**: For important changes where GitHub checks must run (test updates, CI fixes, etc.)
-  - **Benefits**: Bypasses GitHub Actions commit restrictions, ensures checks trigger
   - **Usage**: `mcp__github-file-ops__commit_files(message="Fix review feedback", files=[{"path": "file.py", "content": "file content"}])`
-
-- **`mcp__github-file-ops__delete_files`**: Deletes files directly via GitHub API  
-  - **When to use**: When removing files and checks need to run
-  - **Benefits**: Same as commit_files, ensures proper check triggering
+  
+- **`mcp__github-file-ops__delete_files`**: Deletes files directly via GitHub API
   - **Usage**: `mcp__github-file-ops__delete_files(message="Remove deprecated files", paths=["old_file.py"])`
 
-#### Tool Selection Strategy
-1. **Use MCP tools** when:
-   - Making test changes that need verification
-   - Fixing CI/build issues 
-   - Addressing critical feedback where checks are essential
-   - Previous pushes didn't trigger checks as expected
-
-2. **Use standard git** when:
-   - Making simple documentation updates
-   - Small style/formatting changes
-   - Multiple incremental commits before final push
-
-#### MCP Tool Usage Pattern
-```bash
-# Option 1: Read files, then use MCP to commit
-file_content = read_file("path/to/file.py")
-# ... modify content ...
-mcp__github-file-ops__commit_files(
-    message="fix: address reviewer feedback on error handling",
-    files=[{"path": "path/to/file.py", "content": modified_content}]
-)
-
-# Option 2: Delete files via MCP
-mcp__github-file-ops__delete_files(
-    message="remove: deprecated utility functions per review",
-    paths=["utils/deprecated.py", "tests/test_deprecated.py"]
-)
-```
+#### Standard Git Commands
+- Use `git add`, `git commit`, `git push` for traditional workflow when preferred
 
 After addressing feedback, you must complete the full update cycle:
 
