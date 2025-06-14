@@ -19,7 +19,7 @@ class TestGenerateMcpConfig:
             "GITHUB_REPOSITORY": "owner/repo",
             "GITHUB_REF_NAME": "feature-branch",
             "GITHUB_ACTION_PATH": "/path/to/action"
-        }):
+        }, clear=True):
             config_json = generate_mcp_config("pr-update", "token123")
             config = json.loads(config_json)
             
@@ -63,7 +63,7 @@ class TestGenerateMcpConfig:
             "GITHUB_HEAD_REF": "pr-branch",
             "GITHUB_REF_NAME": "main",
             "GITHUB_ACTION_PATH": "/path"
-        }):
+        }, clear=True):
             config_json = generate_mcp_config("pr-update", "token123")
             config = json.loads(config_json)
             assert config["mcpServers"]["github-file-ops"]["env"]["BRANCH_NAME"] == "pr-branch"
