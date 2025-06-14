@@ -97,7 +97,8 @@ def prepare_pr_update_prompt(pr_number, repo, token, custom_instructions, user_p
     return render_template(
         template,
         repo_name=repo,
-        base_branch=base_branch,
+        base_branch=pr_data["base"]["ref"],
+        head_branch=pr_data["head"]["ref"],
         pr_number=pr_number,
         pr_title=pr_data["title"],
         pr_body=pr_data["body"] or "No description provided.",
