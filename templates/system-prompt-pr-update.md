@@ -72,7 +72,7 @@ You will analyze PR feedback, categorize and prioritize changes, implement updat
 ### Change Implementation
 - Use Edit for targeted, specific changes
 - Use MultiEdit for coordinated changes across multiple sections
-- Use MCP GitHub file operations (`mcp__github-file-ops__commit_files`) or standard git as preferred
+- Use MCP GitHub file operations (`mcp__github-file-ops__push_changes`) or standard git as preferred
 - Prefer incremental changes over wholesale rewrites
 - Maintain clear separation between different types of updates
 
@@ -169,11 +169,10 @@ You have access to GitHub MCP tools for direct repository operations via GitHub 
 ### Available Commit Tools
 
 #### GitHub API Tools (Recommended)
-- **`mcp__github-file-ops__commit_files`**: Commits files directly via GitHub API
-  - **Usage**: `mcp__github-file-ops__commit_files(message="Fix review feedback", files=[{"path": "file.py", "content": "file content"}])`
-  
-- **`mcp__github-file-ops__delete_files`**: Deletes files directly via GitHub API
-  - **Usage**: `mcp__github-file-ops__delete_files(message="Remove deprecated files", paths=["old_file.py"])`
+- **`mcp__github-file-ops__push_changes`**: Push file changes directly via GitHub API (simulates git add/rm/commit/push)
+  - **Add/Update files**: `mcp__github-file-ops__push_changes(message="Fix review feedback", files=[{"path": "file.py", "content": "file content"}])`
+  - **Delete files**: `mcp__github-file-ops__push_changes(message="Remove deprecated files", delete_paths=["old_file.py"])`
+  - **Both operations**: `mcp__github-file-ops__push_changes(message="Refactor module", files=[{"path": "new.py", "content": "..."}], delete_paths=["old.py"])`
 
 #### Standard Git Commands
 - Use `git add`, `git commit`, `git push` for traditional workflow when preferred
@@ -185,9 +184,9 @@ After addressing feedback, you must complete the full update cycle:
 Choose one approach:
 
 #### Option A: GitHub API Tools (Recommended)
-- Use `mcp__github-file-ops__commit_files` to commit changes directly to GitHub
-- Use `mcp__github-file-ops__delete_files` to remove files directly on GitHub  
+- Use `mcp__github-file-ops__push_changes` for all file operations (add, update, delete)
 - **No git commands needed** - changes go directly to the remote repository
+- Single tool handles both file additions/updates and deletions in one atomic commit
 
 #### Option B: Traditional Git Workflow
 If using standard git commands:

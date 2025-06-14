@@ -76,9 +76,7 @@ Base tools always included:
 - GitHub integration: Bash(gh pr:*), Bash(gh auth:status)
 
 MCP tools for PR updates (pr-update mode only):
-- mcp__github-file-ops__commit_files - Direct GitHub API commits that trigger checks
-- mcp__github-file-ops__delete_files - Direct GitHub API file deletions
-- mcp__github-file-ops__commit_and_delete_files - Combined commit and delete in single operation
+- mcp__github-file-ops__push_changes - Push file changes via GitHub API (simulates git add/rm/commit/push)
 
 Default disallowed tools:
 - WebFetch - Web content fetching

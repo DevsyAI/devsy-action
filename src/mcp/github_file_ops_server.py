@@ -52,7 +52,7 @@ def make_github_request(
     return response.json() if response.text else {}
 
 
-def commit_files_impl(
+def commit_files_impl(  # DEPRECATED: Use push_changes_impl instead
     message: str,
     files: List[Dict[str, str]],
     owner: Optional[str] = None,
@@ -176,7 +176,7 @@ def commit_files_impl(
         }
 
 
-def commit_and_delete_files_impl(
+def push_changes_impl(
     message: str,
     files: List[Dict[str, str]] = None,
     delete_paths: List[str] = None,
@@ -186,7 +186,7 @@ def commit_and_delete_files_impl(
     github_token: Optional[str] = None
 ) -> Dict[str, Any]:
     """
-    Commit and/or delete files in a GitHub repository in a single operation.
+    Push file changes to a GitHub repository (simulates git add/rm/commit/push).
     
     Args:
         message: Commit message
@@ -323,7 +323,7 @@ def commit_and_delete_files_impl(
         }
 
 
-def delete_files_impl(
+def delete_files_impl(  # DEPRECATED: Use push_changes_impl instead
     message: str,
     paths: List[str],
     owner: Optional[str] = None,
@@ -453,8 +453,8 @@ async def handle_list_tools() -> list[types.Tool]:
     """List available tools."""
     return [
         types.Tool(
-            name="commit_files",
-            description="Commit files to a GitHub repository",
+            name="push_changes",
+            description="Push file changes to GitHub repository (simulates git add/rm/commit/push)",
             inputSchema={
                 "type": "object",
                 "properties": {
@@ -464,55 +464,7 @@ async def handle_list_tools() -> list[types.Tool]:
                     },
                     "files": {
                         "type": "array",
-                        "description": "List of files to commit",
-                        "items": {
-                            "type": "object",
-                            "properties": {
-                                "path": {
-                                    "type": "string",
-                                    "description": "File path"
-                                },
-                                "content": {
-                                    "type": "string",
-                                    "description": "File content"
-                                }
-                            },
-                            "required": ["path", "content"]
-                        }
-                    },
-                    "owner": {
-                        "type": "string",
-                        "description": "Repository owner (optional, defaults to env var)"
-                    },
-                    "repo": {
-                        "type": "string",
-                        "description": "Repository name (optional, defaults to env var)"
-                    },
-                    "branch": {
-                        "type": "string",
-                        "description": "Branch name (optional, defaults to env var)"
-                    },
-                    "github_token": {
-                        "type": "string",
-                        "description": "GitHub token (optional, defaults to env var)"
-                    }
-                },
-                "required": ["message", "files"]
-            }
-        ),
-        types.Tool(
-            name="commit_and_delete_files",
-            description="Commit and/or delete files in a single GitHub commit",
-            inputSchema={
-                "type": "object",
-                "properties": {
-                    "message": {
-                        "type": "string",
-                        "description": "Commit message"
-                    },
-                    "files": {
-                        "type": "array",
-                        "description": "List of files to commit (optional)",
+                        "description": "List of files to add/update (optional)",
                         "items": {
                             "type": "object",
                             "properties": {
@@ -554,43 +506,6 @@ async def handle_list_tools() -> list[types.Tool]:
                 },
                 "required": ["message"]
             }
-        ),
-        types.Tool(
-            name="delete_files",
-            description="Delete files from a GitHub repository",
-            inputSchema={
-                "type": "object",
-                "properties": {
-                    "message": {
-                        "type": "string",
-                        "description": "Commit message"
-                    },
-                    "paths": {
-                        "type": "array",
-                        "description": "List of file paths to delete",
-                        "items": {
-                            "type": "string"
-                        }
-                    },
-                    "owner": {
-                        "type": "string",
-                        "description": "Repository owner (optional, defaults to env var)"
-                    },
-                    "repo": {
-                        "type": "string",
-                        "description": "Repository name (optional, defaults to env var)"
-                    },
-                    "branch": {
-                        "type": "string",
-                        "description": "Branch name (optional, defaults to env var)"
-                    },
-                    "github_token": {
-                        "type": "string",
-                        "description": "GitHub token (optional, defaults to env var)"
-                    }
-                },
-                "required": ["message", "paths"]
-            }
         )
     ]
 
@@ -599,12 +514,8 @@ async def handle_list_tools() -> list[types.Tool]:
 async def handle_call_tool(name: str, arguments: dict) -> list[types.TextContent]:
     """Handle tool calls."""
     try:
-        if name == "commit_files":
-            result = commit_files_impl(**arguments)
-        elif name == "delete_files":
-            result = delete_files_impl(**arguments)
-        elif name == "commit_and_delete_files":
-            result = commit_and_delete_files_impl(**arguments)
+        if name == "push_changes":
+            result = push_changes_impl(**arguments)
         else:
             result = {"success": False, "error": f"Unknown tool: {name}"}
         
