@@ -37,24 +37,24 @@ class TestGenerateMcpConfig:
     def test_pr_gen_mode(self):
         """Test MCP config generation for pr-gen mode."""
         config_json = generate_mcp_config("pr-gen", "token123")
-        assert config_json == "{}"
+        assert config_json == '{"mcpServers": {}}'
     
     def test_plan_gen_mode(self):
         """Test MCP config generation for plan-gen mode."""
         config_json = generate_mcp_config("plan-gen", "token123")
-        assert config_json == "{}"
+        assert config_json == '{"mcpServers": {}}'
     
     def test_invalid_repository(self):
         """Test handling of invalid repository format."""
         with patch.dict(os.environ, {"GITHUB_REPOSITORY": "invalid"}):
             config_json = generate_mcp_config("pr-update", "token123")
-            assert config_json == "{}"
+            assert config_json == '{"mcpServers": {}}'
     
     def test_missing_repository(self):
         """Test handling of missing repository."""
         with patch.dict(os.environ, {}, clear=True):
             config_json = generate_mcp_config("pr-update", "token123")
-            assert config_json == "{}"
+            assert config_json == '{"mcpServers": {}}'
     
     def test_head_ref_priority(self):
         """Test that GITHUB_HEAD_REF takes priority over GITHUB_REF_NAME."""
@@ -130,7 +130,7 @@ class TestMain:
                 main()
                 
                 # Verify empty config was set
-                mock_output.assert_called_once_with("mcp_config", "{}")
+                mock_output.assert_called_once_with("mcp_config", '{"mcpServers": {}}')
                 
                 # Check console output
                 captured = capsys.readouterr()

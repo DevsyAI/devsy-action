@@ -24,13 +24,13 @@ def generate_mcp_config(mode: str, github_token: str) -> str:
     """
     # Only enable MCP server for pr-update mode
     if mode != "pr-update":
-        return "{}"
+        return '{"mcpServers": {}}'
     
     # Extract repository information from environment
     repo = os.environ.get("GITHUB_REPOSITORY", "")
     if not repo or "/" not in repo:
         print("⚠️  Could not determine repository owner/name from GITHUB_REPOSITORY")
-        return "{}"
+        return '{"mcpServers": {}}'
     
     owner, repo_name = repo.split("/", 1)
     branch = os.environ.get("GITHUB_HEAD_REF") or os.environ.get("GITHUB_REF_NAME", "main")
