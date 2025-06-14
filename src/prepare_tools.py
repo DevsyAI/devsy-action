@@ -30,6 +30,7 @@ def get_base_tools(mode: str = None) -> str:
         "Bash(gh auth:status)",  # Allow checking GitHub auth status
         "Bash(cat:*)",
         "Bash(rm:*)",
+        "Bash(find:*)",  # Allow find commands for file searching
         "Task",
         "TodoWrite",
         "TodoRead",

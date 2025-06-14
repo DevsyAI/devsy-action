@@ -71,7 +71,7 @@ devsy-action/
 Base tools always included:
 - File operations: Edit, MultiEdit, Read, Write, Glob, Grep, LS
 - Git commands: All git operations via Bash(git:*)
-- Search: Ripgrep via Bash(rg:*)
+- Search: Ripgrep via Bash(rg:*), find via Bash(find:*)
 - Task management: Task, TodoWrite, TodoRead
 - GitHub integration: Bash(gh pr:*)
 
