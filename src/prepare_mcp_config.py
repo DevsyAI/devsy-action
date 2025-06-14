@@ -11,13 +11,14 @@ import os
 import sys
 
 
-def generate_mcp_config(mode: str, github_token: str) -> str:
+def generate_mcp_config(mode: str, github_token: str, pr_number: str = None) -> str:
     """
     Generate MCP configuration based on the action mode.
     
     Args:
         mode: The action mode (pr-gen, pr-update, plan-gen)
         github_token: GitHub authentication token
+        pr_number: PR number for pr-update mode
         
     Returns:
         JSON string containing MCP configuration
@@ -33,7 +34,30 @@ def generate_mcp_config(mode: str, github_token: str) -> str:
         return '{"mcpServers": {}}'
     
     owner, repo_name = repo.split("/", 1)
-    branch = os.environ.get("GITHUB_HEAD_REF") or os.environ.get("GITHUB_REF_NAME", "main")
+    
+    # For pr-update mode, fetch the PR's head branch
+    if mode == "pr-update" and pr_number:
+        try:
+            import requests
+            api_url = f"https://api.github.com/repos/{owner}/{repo_name}/pulls/{pr_number}"
+            headers = {
+                "Accept": "application/vnd.github+json",
+                "Authorization": f"Bearer {github_token}",
+                "X-GitHub-Api-Version": "2022-11-28"
+            }
+            response = requests.get(api_url, headers=headers)
+            if response.ok:
+                pr_data = response.json()
+                branch = pr_data["head"]["ref"]
+                print(f"🔧 Using PR head branch: {branch}")
+            else:
+                print(f"⚠️  Failed to fetch PR data: {response.status_code}")
+                branch = os.environ.get("GITHUB_HEAD_REF") or os.environ.get("GITHUB_REF_NAME", "main")
+        except Exception as e:
+            print(f"⚠️  Error fetching PR data: {e}")
+            branch = os.environ.get("GITHUB_HEAD_REF") or os.environ.get("GITHUB_REF_NAME", "main")
+    else:
+        branch = os.environ.get("GITHUB_HEAD_REF") or os.environ.get("GITHUB_REF_NAME", "main")
     
     # Generate MCP configuration
     config = {
@@ -78,6 +102,7 @@ def main() -> None:
     """Main function to prepare MCP configuration."""
     mode = os.environ.get("DEVSY_MODE", "")
     github_token = os.environ.get("GITHUB_TOKEN", "")
+    pr_number = os.environ.get("DEVSY_PR_NUMBER", "")
     
     if not mode:
         print("❌ DEVSY_MODE environment variable not set")
@@ -88,7 +113,7 @@ def main() -> None:
         sys.exit(1)
     
     # Generate MCP configuration
-    mcp_config = generate_mcp_config(mode, github_token)
+    mcp_config = generate_mcp_config(mode, github_token, pr_number)
     
     # Set GitHub Actions output
     set_github_output("mcp_config", mcp_config)

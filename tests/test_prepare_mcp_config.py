@@ -4,6 +4,7 @@ import json
 import os
 import pytest
 from unittest.mock import patch, mock_open
+import responses
 
 import sys
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'src'))
@@ -67,6 +68,26 @@ class TestGenerateMcpConfig:
             config_json = generate_mcp_config("pr-update", "token123")
             config = json.loads(config_json)
             assert config["mcpServers"]["github-file-ops"]["env"]["BRANCH_NAME"] == "pr-branch"
+    
+    @responses.activate
+    def test_pr_update_with_pr_number(self):
+        """Test MCP config generation for pr-update mode with PR number."""
+        # Mock GitHub API response
+        responses.add(
+            responses.GET,
+            "https://api.github.com/repos/owner/repo/pulls/123",
+            json={"head": {"ref": "feature-branch-from-pr"}, "base": {"ref": "main"}},
+            status=200
+        )
+        
+        with patch.dict(os.environ, {
+            "GITHUB_REPOSITORY": "owner/repo",
+            "GITHUB_REF_NAME": "main",
+            "GITHUB_ACTION_PATH": "/path"
+        }, clear=True):
+            config_json = generate_mcp_config("pr-update", "token123", "123")
+            config = json.loads(config_json)
+            assert config["mcpServers"]["github-file-ops"]["env"]["BRANCH_NAME"] == "feature-branch-from-pr"
 
 
 class TestSetGithubOutput:
@@ -98,13 +119,23 @@ class TestSetGithubOutput:
 class TestMain:
     """Test the main function."""
     
+    @responses.activate
     def test_successful_pr_update(self, capsys):
         """Test successful execution for pr-update mode."""
+        # Mock GitHub API response
+        responses.add(
+            responses.GET,
+            "https://api.github.com/repos/owner/repo/pulls/456",
+            json={"head": {"ref": "pr-feature-branch"}, "base": {"ref": "main"}},
+            status=200
+        )
+        
         with patch.dict(os.environ, {
             "DEVSY_MODE": "pr-update",
             "GITHUB_TOKEN": "token123",
             "GITHUB_REPOSITORY": "owner/repo",
-            "GITHUB_ACTION_PATH": "/action"
+            "GITHUB_ACTION_PATH": "/action",
+            "DEVSY_PR_NUMBER": "456"
         }):
             with patch("prepare_mcp_config.set_github_output") as mock_output:
                 main()
