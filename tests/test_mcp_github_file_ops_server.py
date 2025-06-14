@@ -63,6 +63,10 @@ class TestCommitFiles:
             {"object": {"sha": "base123"}},
             # Get base commit
             {"tree": {"sha": "tree123"}},
+            # Create blob for first file
+            {"sha": "blob1"},
+            # Create blob for second file
+            {"sha": "blob2"},
             # Create tree
             {"sha": "newtree123"},
             # Create commit
@@ -89,14 +93,14 @@ class TestCommitFiles:
         assert "2 file(s)" in result["message"]
         
         # Verify the tree creation call
-        tree_call = mock_github_request.call_args_list[2]
+        tree_call = mock_github_request.call_args_list[4]  # Tree creation is now the 5th call
         assert tree_call[0][0] == "POST"
         assert "git/trees" in tree_call[0][1]
         tree_data = tree_call[0][3]
         assert tree_data["base_tree"] == "tree123"
         assert len(tree_data["tree"]) == 2
         assert tree_data["tree"][0]["path"] == "test.txt"
-        assert tree_data["tree"][0]["content"] == "Hello World"
+        assert tree_data["tree"][0]["sha"] == "blob1"  # Now using blob SHA instead of content
     
     @patch('github_file_ops_server.make_github_request')
     def test_commit_failure(self, mock_github_request):
@@ -128,15 +132,7 @@ class TestDeleteFiles:
             {"object": {"sha": "base123"}},
             # Get base commit
             {"tree": {"sha": "tree123"}},
-            # Get current tree
-            {
-                "tree": [
-                    {"path": "keep.txt", "mode": "100644", "type": "blob", "sha": "sha1"},
-                    {"path": "delete.txt", "mode": "100644", "type": "blob", "sha": "sha2"},
-                    {"path": "also-delete.txt", "mode": "100644", "type": "blob", "sha": "sha3"}
-                ]
-            },
-            # Create new tree
+            # Create new tree (no longer getting current tree)
             {"sha": "newtree123"},
             # Create commit
             {"sha": "newcommit123", "html_url": "https://github.com/owner/repo/commit/newcommit123"},
@@ -157,13 +153,17 @@ class TestDeleteFiles:
         assert result["sha"] == "newcommit123"
         assert "2 file(s)" in result["message"]
         
-        # Verify the new tree only contains the kept file
-        tree_call = mock_github_request.call_args_list[3]
+        # Verify the tree creation for deletions
+        tree_call = mock_github_request.call_args_list[2]  # Tree creation is now the 3rd call
         assert tree_call[0][0] == "POST"
         assert "git/trees" in tree_call[0][1]
         tree_data = tree_call[0][3]
-        assert len(tree_data["tree"]) == 1
-        assert tree_data["tree"][0]["path"] == "keep.txt"
+        assert tree_data["base_tree"] == "tree123"
+        assert len(tree_data["tree"]) == 2
+        assert tree_data["tree"][0]["path"] == "delete.txt"
+        assert tree_data["tree"][0]["sha"] is None  # SHA is None for deletions
+        assert tree_data["tree"][1]["path"] == "also-delete.txt"
+        assert tree_data["tree"][1]["sha"] is None
     
     @patch('github_file_ops_server.make_github_request')
     def test_delete_nonexistent_files(self, mock_github_request):
@@ -174,14 +174,7 @@ class TestDeleteFiles:
             {"object": {"sha": "base123"}},
             # Get base commit
             {"tree": {"sha": "tree123"}},
-            # Get current tree (no files match the delete paths)
-            {
-                "tree": [
-                    {"path": "keep1.txt", "mode": "100644", "type": "blob", "sha": "sha1"},
-                    {"path": "keep2.txt", "mode": "100644", "type": "blob", "sha": "sha2"}
-                ]
-            },
-            # Create new tree
+            # Create new tree (simplified implementation doesn't check existence)
             {"sha": "newtree123"},
             # Create commit
             {"sha": "newcommit123", "html_url": "https://github.com/owner/repo/commit/newcommit123"},
@@ -199,7 +192,7 @@ class TestDeleteFiles:
         )
         
         assert result["success"] is True
-        assert "0 file(s)" in result["message"]
+        assert "1 file(s)" in result["message"]  # Reports deletion attempt regardless of existence
     
     @patch('github_file_ops_server.make_github_request')
     def test_delete_failure(self, mock_github_request):

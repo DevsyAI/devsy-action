@@ -26,7 +26,8 @@ class TestGetBaseTools:
             "Bash(git:*)",
             "Bash(gh pr:*)",  # Updated to match PR-specific pattern
             "Bash(gh auth:status)",
-            "Bash(find:*)"  # Find commands for file searching
+            "Bash(find:*)",  # Find commands for file searching
+            "Bash(mv:*)"     # Move/rename commands
         ]
         for tool in expected_tools:
             assert tool in result
@@ -35,7 +36,7 @@ class TestGetBaseTools:
         """Test that base tools are comma-separated."""
         result = get_base_tools()
         tools = result.split(",")
-        assert len(tools) >= 15  # Should have many base tools (increased from > 10)
+        assert len(tools) >= 16  # Should have many base tools (added mv)
         assert all(tool.strip() for tool in tools)  # No empty tools
 
 
