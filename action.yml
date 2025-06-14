@@ -197,10 +197,22 @@ runs:
     - name: Prepare tool configuration
       id: prepare_tools
       shell: bash
+      env:
+        DEVSY_MODE: ${{ inputs.mode }}
       run: |
         /tmp/devsy-action-env/bin/python ${{ github.action_path }}/src/prepare_tools.py \
           --allowed-tools "${{ inputs.allowed_tools }}" \
           --disallowed-tools "${{ inputs.disallowed_tools }}"
+
+    - name: Prepare MCP configuration
+      id: prepare_mcp
+      shell: bash
+      env:
+        DEVSY_MODE: ${{ inputs.mode }}
+        GITHUB_TOKEN: ${{ steps.token_exchange.outputs.github_token }}
+        GITHUB_ACTION_PATH: ${{ github.action_path }}
+      run: |
+        /tmp/devsy-action-env/bin/python ${{ github.action_path }}/src/prepare_mcp_config.py
 
     - name: Run Claude Code with git and gh tools
       id: run_claude
@@ -217,6 +229,7 @@ runs:
         use_bedrock: ${{ inputs.use_bedrock }}
         use_vertex: ${{ inputs.use_vertex }}
         claude_env: ${{ inputs.claude_env }}
+        mcp_config: ${{ steps.prepare_mcp.outputs.mcp_config }}
       env:
         # GitHub CLI authentication
         GITHUB_TOKEN: ${{ steps.token_exchange.outputs.github_token }}

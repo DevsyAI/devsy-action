@@ -18,15 +18,18 @@ devsy-action/
 ├── action.yml              # GitHub Action definition with inputs/outputs
 ├── README.md              # User documentation
 ├── LICENSE                # MIT License
-├── requirements.txt       # Python dependencies (requests>=2.31.0, pytest for dev)
+├── requirements.txt       # Python dependencies (requests, mcp, uvloop, pytest for dev)
 ├── pytest.ini             # Pytest configuration
 ├── src/                   # Core Python scripts (all executable)
 │   ├── extract_outputs.py         # Extract PR numbers, URLs, and plan content from Claude's output
 │   ├── github_token_exchange.py   # Exchange GitHub Actions token for devsy-bot GitHub App token
+│   ├── prepare_mcp_config.py      # Generate MCP configuration for GitHub file operations
 │   ├── prepare_prompt.py          # Generate prompts based on action mode and inputs
 │   ├── prepare_tools.py           # Prepare allowed/disallowed tools configuration
 │   ├── send_callback.py           # Send webhook callbacks on completion
-│   └── validate_inputs.py         # Validate action inputs based on mode
+│   ├── validate_inputs.py         # Validate action inputs based on mode
+│   └── mcp/                       # MCP server implementations
+│       └── github_file_ops_server.py  # GitHub file operations server for PR checks
 ├── templates/             # Prompt templates for different modes
 │   ├── README.md                  # Template system documentation
 │   ├── plan-gen.md               # User prompt for plan generation
@@ -36,7 +39,7 @@ devsy-action/
 │   ├── system-prompt-pr-gen.md   # System prompt for PR generation
 │   └── system-prompt-pr-update.md # System prompt for PR updates
 ├── tests/                 # Unit tests for all Python scripts
-│   ├── test_*.py                 # Comprehensive test coverage (71 tests)
+│   ├── test_*.py                 # Comprehensive test coverage (110 tests)
 │   └── __init__.py
 ├── docs/                  # Additional documentation
 │   └── TODOS.md                  # Marketplace publishing roadmap
@@ -71,6 +74,10 @@ Base tools always included:
 - Search: Ripgrep via Bash(rg:*)
 - Task management: Task, TodoWrite, TodoRead
 - GitHub integration: Bash(gh pr:*)
+
+MCP tools for PR updates (pr-update mode only):
+- mcp__github-file-ops__commit_files - Direct GitHub API commits that trigger checks
+- mcp__github-file-ops__delete_files - Direct GitHub API file deletions
 
 Default disallowed tools:
 - WebFetch - Web content fetching
@@ -110,6 +117,9 @@ python src/extract_outputs.py --execution-file claude-execution.json --mode pr-g
 # Test tool preparation
 python src/prepare_tools.py --allowed-tools "Bash(npm install)" --disallowed-tools "Bash(rm:*)"
 
+# Test MCP configuration
+python src/prepare_mcp_config.py
+
 # Validate inputs
 python src/validate_inputs.py --mode pr-update --pr-number 123 --anthropic-api-key $API_KEY
 ```
@@ -127,9 +137,10 @@ Currently no automated linting is configured. Follow PEP 8 conventions manually.
 2. **Token Exchange** (`github_token_exchange.py`): Attempts to get devsy-bot token
 3. **Prompt Preparation** (`prepare_prompt.py`): Loads templates, fetches GitHub data, renders prompts
 4. **Tool Configuration** (`prepare_tools.py`): Merges base tools with user-specified tools
-5. **Claude Code Execution**: Uses anthropics/claude-code-base-action with MCP GitHub server
-6. **Output Extraction** (`extract_outputs.py`): Parses Claude's JSON output for PR info
-7. **Callback Notification** (`send_callback.py`): Sends webhook if callback_url provided
+5. **MCP Configuration** (`prepare_mcp_config.py`): Generates MCP server config for GitHub file operations
+6. **Claude Code Execution**: Uses anthropics/claude-code-base-action with MCP GitHub server
+7. **Output Extraction** (`extract_outputs.py`): Parses Claude's JSON output for PR info
+8. **Callback Notification** (`send_callback.py`): Sends webhook if callback_url provided
 
 ### Key Design Decisions
 - **Modular Python Scripts**: Each script has a single responsibility and can be tested independently
@@ -140,9 +151,13 @@ Currently no automated linting is configured. Follow PEP 8 conventions manually.
 
 ### GitHub MCP Integration
 The action uses Model Context Protocol (MCP) to give Claude Code access to GitHub APIs:
-- Configured via `mcp_config` in the base action
+- **Built-in GitHub MCP**: Configured via `mcp_config` in the base action for standard GitHub operations
+- **GitHub File Operations MCP**: Custom server for direct GitHub API commits and deletions
+  - Only enabled for `pr-update` mode to trigger GitHub checks when normal git operations might not
+  - Uses GitHub API directly to create commits that can bypass GitHub Actions commit restrictions
+  - Provides `commit_files` and `delete_files` tools that work around check trigger limitations
 - Uses the exchanged token for authentication
-- Enables `mcp__github__create_pull_request` tool
+- Enables advanced GitHub repository manipulation beyond standard git commands
 
 ## Adding New Features
 

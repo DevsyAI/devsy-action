@@ -10,8 +10,12 @@ import os
 from typing import List
 
 
-def get_base_tools() -> str:
-    """Get the base set of tools that are always included."""
+def get_base_tools(mode: str = None) -> str:
+    """Get the base set of tools that are always included.
+    
+    Args:
+        mode: The action mode (pr-gen, pr-update, plan-gen)
+    """
     base_tools = [
         "Edit",
         "MultiEdit",
@@ -30,6 +34,14 @@ def get_base_tools() -> str:
         "TodoWrite",
         "TodoRead",
     ]
+    
+    # Add MCP GitHub file operations tools for pr-update mode
+    if mode == "pr-update":
+        base_tools.extend([
+            "mcp__github-file-ops__commit_files",
+            "mcp__github-file-ops__delete_files"
+        ])
+    
     return ",".join(base_tools)
 
 
@@ -73,11 +85,17 @@ def main() -> None:
         default="", 
         help="Tools to disallow (comma-separated)"
     )
+    parser.add_argument(
+        "--mode",
+        default=None,
+        help="Action mode (pr-gen, pr-update, plan-gen)"
+    )
 
     args = parser.parse_args()
 
     # Get base tools and combine with additional tools
-    base_tools = get_base_tools()
+    mode = args.mode or os.environ.get("DEVSY_MODE")
+    base_tools = get_base_tools(mode)
     final_allowed_tools = combine_tools(base_tools, args.allowed_tools)
 
     # Get default disallowed tools and combine with user-provided ones
@@ -89,7 +107,9 @@ def main() -> None:
     set_github_output("disallowed_tools", final_disallowed_tools)
 
     print("✅ Tool configuration prepared")
-    print(f"📦 Base tools: {len(get_base_tools().split(','))} tools")
+    print(f"📦 Base tools: {len(base_tools.split(','))} tools")
+    if mode == "pr-update":
+        print("🔧 MCP GitHub file operations tools enabled for pr-update mode")
     if args.allowed_tools:
         additional_count = len([t for t in args.allowed_tools.split(",") if t.strip()])
         print(f"➕ Additional tools: {additional_count} tools")
