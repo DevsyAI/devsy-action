@@ -180,30 +180,32 @@ You have access to GitHub MCP tools for direct repository operations via GitHub 
 
 After addressing feedback, you must complete the full update cycle:
 
-### Required Git Workflow Operations
-1. **Branch Checkout**: First, ensure you're on the correct PR branch
+### File Update Workflows
+
+Choose one approach:
+
+#### Option A: GitHub API Tools (Recommended)
+- Use `mcp__github-file-ops__commit_files` to commit changes directly to GitHub
+- Use `mcp__github-file-ops__delete_files` to remove files directly on GitHub  
+- **No git commands needed** - changes go directly to the remote repository
+
+#### Option B: Traditional Git Workflow
+If using standard git commands:
+1. **Branch Checkout**: Ensure you're on the correct PR branch
    - Get the PR branch name: `gh pr view {{ pr_number }} --json headRefName -q .headRefName`
    - Check current branch: `git branch --show-current`
    - Switch to PR branch if needed: `git checkout <branch-name-from-step-1>`
-   - Verify you're on the correct branch before making any changes
 
 2. **File Updates**: **CRITICAL - You MUST commit ALL changes before completing**
    - Stage ALL changes: `git add .` to ensure no files are missed
-   - Write clear commit messages referencing the feedback addressed: `git commit -m "fix: address review feedback on error handling"`
-   - **Handle pre-commit hooks**: If commits fail due to formatting/linting changes:
-     * Pre-commit hooks may modify files (formatting, imports, etc.)
-     * Check `git status` after failed commit to see what changed
-     * Stage the hook-modified files: `git add .`
-     * Commit again: `git commit -m "fix: apply pre-commit formatting"`
-     * Repeat until commit succeeds with clean working directory
-   - Group related fixes into logical commits when possible
+   - Write clear commit messages: `git commit -m "fix: address review feedback on error handling"`
+   - Handle pre-commit hooks if commits fail due to formatting changes
    - **Verify no uncommitted changes**: Run `git status` to confirm working directory is clean
    - Push to update the remote branch: `git push origin <branch-name-from-checkout-step>`
-   - **NEVER leave uncommitted changes** - they won't be included in the PR update
 
 ### Required Post-Implementation Actions
 
-After successfully implementing all feedback and pushing changes:
+After successfully implementing all feedback and committing changes:
 
 #### 1. Summary Comment (Always Required)
 **You MUST add a comprehensive summary comment using `gh pr comment`.**
@@ -249,7 +251,7 @@ All requested changes have been implemented. The PR is ready for re-review.
 - Update description to include new implementation details
 - Prefix title updates to show evolution (e.g., "feat: add user auth" → "feat: add user auth with OAuth integration")
 
-### Available Git Commands
+### Available Git Commands (for traditional workflow)
 - `git add <files>` - Stage files for commit
 - `git commit -m "<message>"` - Create commits with messages
 - `git push origin <branch-name>` - Push changes to remote branch
@@ -264,13 +266,13 @@ All requested changes have been implemented. The PR is ready for re-review.
 
 ### Complete Update Strategy
 1. **Code Changes**: Make changes incrementally, addressing one type of feedback at a time
-2. **Commit & Push**: Commit frequently with descriptive messages, then push all changes
+2. **Commit Changes**: Use MCP tools or git workflow to commit changes with descriptive messages
 3. **Summary Comment**: **EXECUTE** `gh pr comment` to add comprehensive summary
 4. **Metadata Review**: **EXECUTE** `gh pr edit` if updates are warranted
 5. **Final Verification**: Ensure all feedback addressed and PR is ready for re-review
 
 ### Critical Error Handling
-**Commit Failures (Most Common Issue):**
+**Git Commit Failures (when using traditional git workflow):**
 - If `git commit` fails due to pre-commit hooks:
   1. Check `git status` - hooks may have modified files (formatting, linting, etc.)
   2. Stage hook-modified files: `git add .`
