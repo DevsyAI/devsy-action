@@ -164,47 +164,61 @@ You will analyze PR feedback, categorize and prioritize changes, implement updat
 
 ## GitHub Workflow Integration
 
-You have access to GitHub MCP tools for direct repository operations via GitHub API.
+You have access to GitHub MCP tools for committing local file changes via GitHub API. **This is the recommended approach** as it ensures reliable GitHub check triggers and maintains proper git state.
 
-### Available Commit Tools
+### Required Workflow Pattern
 
-#### GitHub API Tools (Recommended)
-- **`mcp__github-file-ops__push_changes`**: Push file changes directly via GitHub API (simulates git add/rm/commit/push)
-  - **Add/Update files**: `mcp__github-file-ops__push_changes(message="Fix review feedback", files=[{"path": "file.py", "content": "file content"}])`
-  - **Delete files**: `mcp__github-file-ops__push_changes(message="Remove deprecated files", delete_paths=["old_file.py"])`
-  - **Both operations**: `mcp__github-file-ops__push_changes(message="Refactor module", files=[{"path": "new.py", "content": "..."}], delete_paths=["old.py"])`
+**Follow this exact sequence for all changes:**
 
-#### Standard Git Commands
-- Use `git add`, `git commit`, `git push` for traditional workflow when preferred
+1. **Edit Files Locally First**
+   - Use `Edit`, `MultiEdit`, `Write`, or `Read` tools to modify files in the working directory
+   - Make all necessary changes to files before committing
+   - Verify changes are correct and complete
 
-After addressing feedback, you must complete the full update cycle:
+2. **Commit Changes via MCP Tools**
+   - Use MCP tools to commit your local changes to the remote repository
+   - **DO NOT use traditional git commands** - the MCP tools handle the commit process
 
-### File Update Workflows
+### Available MCP Commit Tools
 
-Choose one approach:
+#### Primary Tools (Recommended)
+- **`mcp__github-file-ops__commit_files`**: Commit local files to GitHub repository
+  - **Usage**: `mcp__github-file-ops__commit_files(message="Fix review feedback", files=["src/file.py", "tests/test_file.py"])`
+  - Reads file content from local filesystem and commits to remote
+  - Use after editing files locally with Edit/Write tools
 
-#### Option A: GitHub API Tools (Recommended)
-- Use `mcp__github-file-ops__push_changes` for all file operations (add, update, delete)
-- **No git commands needed** - changes go directly to the remote repository
-- Single tool handles both file additions/updates and deletions in one atomic commit
+- **`mcp__github-file-ops__delete_files`**: Delete files from GitHub repository
+  - **Usage**: `mcp__github-file-ops__delete_files(message="Remove deprecated files", files=["old_file.py", "deprecated.js"])`
+  - Deletes specified files from the remote repository
+  - Use when files need to be removed entirely
 
-#### Option B: Traditional Git Workflow
-If using standard git commands:
-1. **Branch Checkout**: Ensure you're on the correct PR branch
-   - Get the PR branch name: `gh pr view {{ pr_number }} --json headRefName -q .headRefName`
-   - Check current branch: `git branch --show-current`
-   - Switch to PR branch if needed: `git checkout <branch-name-from-step-1>`
 
-2. **File Updates**: **CRITICAL - You MUST commit ALL changes before completing**
-   - Stage ALL changes: `git add .` to ensure no files are missed
-   - Write clear commit messages: `git commit -m "fix: address review feedback on error handling"`
-   - Handle pre-commit hooks if commits fail due to formatting changes
-   - **Verify no uncommitted changes**: Run `git status` to confirm working directory is clean
-   - Push to update the remote branch: `git push origin <branch-name-from-checkout-step>`
+### Complete Workflow Example
+
+```
+1. Edit files: Edit("src/component.py", old_string="...", new_string="...")
+2. Edit tests: Edit("tests/test_component.py", old_string="...", new_string="...")
+3. Commit changes: mcp__github-file-ops__commit_files(
+     message="fix: address review feedback on error handling",
+     files=["src/component.py", "tests/test_component.py"]
+   )
+4. Delete old file: mcp__github-file-ops__delete_files(
+     message="remove deprecated utility",
+     files=["src/old_utility.py"]
+   )
+```
+
+### Important Guidelines
+
+- **Always edit files locally first** using standard Claude Code tools
+- **Never skip the local editing step** - MCP tools expect files to exist locally
+- **Use separate commits** for logically different changes (fixes vs deletions)
+- **Verify file paths are correct** - MCP tools will fail if files don't exist locally
+- **Check git status** periodically to ensure working directory state
 
 ### Required Post-Implementation Actions
 
-After successfully implementing all feedback and committing changes:
+After successfully implementing all feedback and committing changes via MCP tools:
 
 #### 1. Summary Comment (Always Required)
 **You MUST add a comprehensive summary comment using `gh pr comment`.**
@@ -240,7 +254,7 @@ All requested changes have been implemented. The PR is ready for re-review.
 - **Description Update**: If implementation approach changed, new dependencies added, or breaking changes introduced
 
 **Assessment Process:**
-1. Use `git diff --stat HEAD~n` to analyze change scope (where n = number of commits made)
+1. Review the commits you made to analyze change scope
 2. Review original PR description against implemented changes
 3. Determine if updates provide value to reviewers
 
@@ -250,40 +264,40 @@ All requested changes have been implemented. The PR is ready for re-review.
 - Update description to include new implementation details
 - Prefix title updates to show evolution (e.g., "feat: add user auth" → "feat: add user auth with OAuth integration")
 
-### Available Git Commands (for traditional workflow)
-- `git add <files>` - Stage files for commit
-- `git commit -m "<message>"` - Create commits with messages
-- `git push origin <branch-name>` - Push changes to remote branch
-- `git diff --stat` - Show change statistics
-- `git log --oneline -n` - Show recent commit history
-
 ### Available GitHub CLI Commands
 - `gh pr view <number>` - Get current PR state and details
 - `gh pr diff <number>` - Get files changed in PR
 - `gh pr comment <number> --body "text"` - Add summary comment to PR
 - `gh pr edit <number> --title "new title" --body "new description"` - Update PR title and/or description
+- `git status` - Check working directory state
+- `git log --oneline -5` - View recent commits
 
 ### Complete Update Strategy
-1. **Code Changes**: Make changes incrementally, addressing one type of feedback at a time
-2. **Commit Changes**: Use MCP tools or git workflow to commit changes with descriptive messages
-3. **Summary Comment**: **EXECUTE** `gh pr comment` to add comprehensive summary
-4. **Metadata Review**: **EXECUTE** `gh pr edit` if updates are warranted
-5. **Final Verification**: Ensure all feedback addressed and PR is ready for re-review
+1. **Code Changes**: Edit files locally using standard Claude Code tools
+2. **Commit Changes**: Use MCP tools to commit local changes to remote repository
+3. **Delete Files**: Use MCP delete_files tool for file removals
+4. **Summary Comment**: **EXECUTE** `gh pr comment` to add comprehensive summary
+5. **Metadata Review**: **EXECUTE** `gh pr edit` if updates are warranted
+6. **Final Verification**: Ensure all feedback addressed and PR is ready for re-review
 
 ### Critical Error Handling
-**Git Commit Failures (when using traditional git workflow):**
-- If `git commit` fails due to pre-commit hooks:
-  1. Check `git status` - hooks may have modified files (formatting, linting, etc.)
-  2. Stage hook-modified files: `git add .`
-  3. Commit again: `git commit -m "fix: apply pre-commit formatting"`
-  4. Repeat until commit succeeds
-  5. **NEVER ignore commit failures** - they mean changes aren't saved
 
-**Final Verification Steps:**
-- Run `git status` after all commits - working directory MUST be clean
-- If files show as modified after "successful" commits, they weren't actually committed
-- Re-stage and commit any remaining changes
-- Only proceed to push when `git status` shows "nothing to commit, working tree clean"
+**MCP Tool Failures:**
+- If `mcp__github-file-ops__commit_files` fails:
+  1. Verify files exist locally using `LS` tool
+  2. Check file paths are correct and accessible
+  3. Retry with correct file paths
+
+**File Not Found Errors:**
+- MCP tools expect files to exist in the local working directory
+- Always use `Edit`, `Write`, or `MultiEdit` to create/modify files first
+- Use `LS` to verify file existence before committing
+- Double-check file paths match exactly what you edited
+
+**Workflow Verification:**
+- Use `git status` to check working directory state after editing
+- Ensure you've edited all intended files before committing
+- Verify commits succeeded by checking GitHub PR or using `git log`
 
 **Other Error Handling:**
 - If GitHub CLI operations fail, retry once before proceeding
