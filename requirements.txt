@@ -1,4 +1,6 @@
 requests>=2.31.0
+mcp[cli]>=1.0.0
+uvloop>=0.17.0
 
 # Development dependencies
 pytest>=7.0.0
