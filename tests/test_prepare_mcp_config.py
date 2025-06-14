@@ -27,7 +27,7 @@ class TestGenerateMcpConfig:
             assert "github-file-ops" in config["mcpServers"]
             
             server_config = config["mcpServers"]["github-file-ops"]
-            assert server_config["command"] == "python"
+            assert server_config["command"] == "/tmp/devsy-action-env/bin/python"
             assert server_config["args"][0] == "/path/to/action/src/mcp/github_file_ops_server.py"
             assert server_config["env"]["GITHUB_TOKEN"] == "token123"
             assert server_config["env"]["REPO_OWNER"] == "owner"

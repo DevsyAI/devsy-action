@@ -39,7 +39,7 @@ def generate_mcp_config(mode: str, github_token: str) -> str:
     config = {
         "mcpServers": {
             "github-file-ops": {
-                "command": "python",
+                "command": "/tmp/devsy-action-env/bin/python",
                 "args": [
                     os.path.join(os.environ.get("GITHUB_ACTION_PATH", ""), "src/mcp/github_file_ops_server.py")
                 ],
