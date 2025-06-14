@@ -299,5 +299,5 @@ if __name__ == "__main__":
         # uvloop is optional, fall back to default event loop
         pass
     
-    # Run the MCP server
-    asyncio.run(mcp.run())
+    # Run the MCP server (synchronous function)
+    mcp.run()
