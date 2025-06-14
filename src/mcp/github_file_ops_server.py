@@ -16,9 +16,14 @@ from typing import List, Dict, Any, Optional
 from datetime import datetime
 import requests
 
-from mcp.server import Server
-from mcp.server.stdio import stdio_server
-from mcp import types
+try:
+    from mcp.server import Server
+    from mcp.server.stdio import stdio_server
+    from mcp import types
+    print("🔧 [DEBUG] ✅ MCP imports successful", file=sys.stderr)
+except ImportError as e:
+    print(f"🔧 [DEBUG] ❌ MCP import failed: {e}", file=sys.stderr)
+    sys.exit(1)
 
 
 def make_github_request(
@@ -288,7 +293,12 @@ def delete_files_impl(
 
 
 # Create the MCP server
-app = Server("GitHub File Operations", version="1.0.0")
+try:
+    app = Server("GitHub File Operations", version="1.0.0")
+    print("🔧 [DEBUG] ✅ MCP Server created successfully", file=sys.stderr)
+except Exception as e:
+    print(f"🔧 [DEBUG] ❌ Failed to create MCP Server: {e}", file=sys.stderr)
+    sys.exit(1)
 
 
 @app.list_tools()
@@ -411,21 +421,64 @@ async def handle_call_tool(name: str, arguments: dict) -> list[types.TextContent
 
 async def main():
     """Run the MCP server."""
+    print("🔧 [DEBUG] Starting MCP server main()", file=sys.stderr)
+    
+    # Check environment variables
+    env_vars = ['GITHUB_TOKEN', 'REPO_OWNER', 'REPO_NAME', 'BRANCH_NAME']
+    for var in env_vars:
+        value = os.environ.get(var)
+        status = "✅" if value else "❌"
+        print(f"🔧 [DEBUG] {status} {var}: {'SET' if value else 'MISSING'}", file=sys.stderr)
+    
     # Optional: set up uvloop for better performance
     try:
         import uvloop
         asyncio.set_event_loop_policy(uvloop.EventLoopPolicy())
+        print("🔧 [DEBUG] ✅ uvloop enabled", file=sys.stderr)
     except ImportError:
         # uvloop is optional, fall back to default event loop
-        pass
+        print("🔧 [DEBUG] ℹ️ uvloop not available, using default event loop", file=sys.stderr)
     
-    async with stdio_server() as (read_stream, write_stream):
-        await app.run(
-            read_stream,
-            write_stream,
-            app.create_initialization_options()
-        )
+    try:
+        print("🔧 [DEBUG] Creating stdio_server...", file=sys.stderr)
+        async with stdio_server() as (read_stream, write_stream):
+            print("🔧 [DEBUG] stdio_server created, starting app.run...", file=sys.stderr)
+            await app.run(
+                read_stream,
+                write_stream,
+                app.create_initialization_options()
+            )
+            print("🔧 [DEBUG] app.run completed successfully", file=sys.stderr)
+    except Exception as e:
+        print(f"🔧 [DEBUG] ❌ Error in main(): {type(e).__name__}: {e}", file=sys.stderr)
+        import traceback
+        traceback.print_exc(file=sys.stderr)
+        raise
 
 
 if __name__ == "__main__":
-    asyncio.run(main())
+    print("🔧 [DEBUG] Script starting...", file=sys.stderr)
+    print(f"🔧 [DEBUG] Python version: {sys.version}", file=sys.stderr)
+    print(f"🔧 [DEBUG] Python executable: {sys.executable}", file=sys.stderr)
+    print(f"🔧 [DEBUG] Working directory: {os.getcwd()}", file=sys.stderr)
+    print(f"🔧 [DEBUG] Script path: {__file__}", file=sys.stderr)
+    
+    # Test mode for debugging
+    if len(sys.argv) > 1 and sys.argv[1] == "--test":
+        print("🔧 [DEBUG] TEST MODE: Server imports and creation successful!", file=sys.stderr)
+        print("🔧 [DEBUG] TEST MODE: Environment variables:", file=sys.stderr)
+        for var in ['GITHUB_TOKEN', 'REPO_OWNER', 'REPO_NAME', 'BRANCH_NAME']:
+            value = os.environ.get(var)
+            print(f"🔧 [DEBUG] TEST MODE: {var} = {'SET' if value else 'MISSING'}", file=sys.stderr)
+        print("🔧 [DEBUG] TEST MODE: Exiting successfully", file=sys.stderr)
+        sys.exit(0)
+    
+    try:
+        print("🔧 [DEBUG] Calling asyncio.run(main())", file=sys.stderr)
+        asyncio.run(main())
+        print("🔧 [DEBUG] asyncio.run completed successfully", file=sys.stderr)
+    except Exception as e:
+        print(f"🔧 [DEBUG] ❌ Fatal error in __main__: {type(e).__name__}: {e}", file=sys.stderr)
+        import traceback
+        traceback.print_exc(file=sys.stderr)
+        sys.exit(1)

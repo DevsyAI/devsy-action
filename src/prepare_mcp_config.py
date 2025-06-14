@@ -96,6 +96,18 @@ def main() -> None:
     if mode == "pr-update" and mcp_config != "{}":
         print("✅ MCP configuration prepared for pr-update mode")
         print("🔧 GitHub file operations server enabled")
+        print(f"🔧 [DEBUG] MCP config: {mcp_config}")
+        
+        # Test the server script exists and is executable
+        script_path = os.path.join(os.environ.get("GITHUB_ACTION_PATH", ""), "src/mcp/github_file_ops_server.py")
+        if os.path.exists(script_path):
+            print(f"🔧 [DEBUG] ✅ Server script exists: {script_path}")
+            if os.access(script_path, os.X_OK):
+                print("🔧 [DEBUG] ✅ Server script is executable")
+            else:
+                print("🔧 [DEBUG] ❌ Server script is not executable")
+        else:
+            print(f"🔧 [DEBUG] ❌ Server script not found: {script_path}")
     else:
         print("ℹ️  MCP server not needed for this mode")
 
