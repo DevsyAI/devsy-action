@@ -16,10 +16,9 @@ from typing import List, Dict, Any, Optional
 from datetime import datetime
 import requests
 
-from mcp.server.fastmcp import FastMCP
-
-# Initialize the MCP server
-mcp = FastMCP("GitHub File Operations")
+from mcp.server import Server
+from mcp.server.stdio import stdio_server
+from mcp import types
 
 
 def make_github_request(
@@ -48,8 +47,7 @@ def make_github_request(
     return response.json() if response.text else {}
 
 
-@mcp.tool()
-def commit_files(
+def commit_files_impl(
     message: str,
     files: List[Dict[str, str]],
     owner: Optional[str] = None,
@@ -164,8 +162,7 @@ def commit_files(
         }
 
 
-@mcp.tool()
-def delete_files(
+def delete_files_impl(
     message: str,
     paths: List[str],
     owner: Optional[str] = None,
@@ -290,8 +287,131 @@ def delete_files(
         }
 
 
-if __name__ == "__main__":
-    # Run the server
+# Create the MCP server
+app = Server("GitHub File Operations", version="1.0.0")
+
+
+@app.list_tools()
+async def handle_list_tools() -> list[types.Tool]:
+    """List available tools."""
+    return [
+        types.Tool(
+            name="commit_files",
+            description="Commit files to a GitHub repository",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "message": {
+                        "type": "string",
+                        "description": "Commit message"
+                    },
+                    "files": {
+                        "type": "array",
+                        "description": "List of files to commit",
+                        "items": {
+                            "type": "object",
+                            "properties": {
+                                "path": {
+                                    "type": "string",
+                                    "description": "File path"
+                                },
+                                "content": {
+                                    "type": "string",
+                                    "description": "File content"
+                                }
+                            },
+                            "required": ["path", "content"]
+                        }
+                    },
+                    "owner": {
+                        "type": "string",
+                        "description": "Repository owner (optional, defaults to env var)"
+                    },
+                    "repo": {
+                        "type": "string",
+                        "description": "Repository name (optional, defaults to env var)"
+                    },
+                    "branch": {
+                        "type": "string",
+                        "description": "Branch name (optional, defaults to env var)"
+                    },
+                    "github_token": {
+                        "type": "string",
+                        "description": "GitHub token (optional, defaults to env var)"
+                    }
+                },
+                "required": ["message", "files"]
+            }
+        ),
+        types.Tool(
+            name="delete_files",
+            description="Delete files from a GitHub repository",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "message": {
+                        "type": "string",
+                        "description": "Commit message"
+                    },
+                    "paths": {
+                        "type": "array",
+                        "description": "List of file paths to delete",
+                        "items": {
+                            "type": "string"
+                        }
+                    },
+                    "owner": {
+                        "type": "string",
+                        "description": "Repository owner (optional, defaults to env var)"
+                    },
+                    "repo": {
+                        "type": "string",
+                        "description": "Repository name (optional, defaults to env var)"
+                    },
+                    "branch": {
+                        "type": "string",
+                        "description": "Branch name (optional, defaults to env var)"
+                    },
+                    "github_token": {
+                        "type": "string",
+                        "description": "GitHub token (optional, defaults to env var)"
+                    }
+                },
+                "required": ["message", "paths"]
+            }
+        )
+    ]
+
+
+@app.call_tool()
+async def handle_call_tool(name: str, arguments: dict) -> list[types.TextContent]:
+    """Handle tool calls."""
+    try:
+        if name == "commit_files":
+            result = commit_files_impl(**arguments)
+        elif name == "delete_files":
+            result = delete_files_impl(**arguments)
+        else:
+            result = {"success": False, "error": f"Unknown tool: {name}"}
+        
+        return [types.TextContent(
+            type="text",
+            text=json.dumps(result, indent=2)
+        )]
+    
+    except Exception as e:
+        return [types.TextContent(
+            type="text",
+            text=json.dumps({
+                "success": False,
+                "error": f"Tool execution failed: {str(e)}"
+            }, indent=2)
+        )]
+
+
+async def main():
+    """Run the MCP server."""
+    # Optional: set up uvloop for better performance
     try:
         import uvloop
         asyncio.set_event_loop_policy(uvloop.EventLoopPolicy())
@@ -299,5 +419,13 @@ if __name__ == "__main__":
         # uvloop is optional, fall back to default event loop
         pass
     
-    # Run the MCP server (synchronous function)
-    mcp.run()
+    async with stdio_server() as (read_stream, write_stream):
+        await app.run(
+            read_stream,
+            write_stream,
+            app.create_initialization_options()
+        )
+
+
+if __name__ == "__main__":
+    asyncio.run(main())

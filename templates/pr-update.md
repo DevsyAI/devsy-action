@@ -2,8 +2,8 @@
 
 ## Repository Context
 - **Repository**: {{ repo_name }}
-- **Base Branch**: {{ base_branch }}
-- **Working Branch**: Continue working on existing PR branch
+- **Base Branch**: {{ base_branch }} (target branch for merge)
+- **Head Branch**: {{ head_branch }} (your working branch)
 
 ## Pull Request Context
 **PR #{{ pr_number }}: {{ pr_title }}**

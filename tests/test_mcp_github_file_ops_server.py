@@ -9,7 +9,7 @@ import base64
 import sys
 import os
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'src', 'mcp'))
-from github_file_ops_server import make_github_request, commit_files, delete_files
+from github_file_ops_server import make_github_request, commit_files_impl, delete_files_impl
 
 
 class TestMakeGithubRequest:
@@ -52,7 +52,7 @@ class TestMakeGithubRequest:
 
 
 class TestCommitFiles:
-    """Test the commit_files function."""
+    """Test the commit_files_impl function."""
     
     @patch('github_file_ops_server.make_github_request')
     def test_successful_commit(self, mock_github_request):
@@ -71,7 +71,7 @@ class TestCommitFiles:
             {"ref": "refs/heads/main"}
         ]
         
-        result = commit_files(
+        result = commit_files_impl(
             message="Test commit",
             files=[
                 {"path": "test.txt", "content": "Hello World"},
@@ -103,7 +103,7 @@ class TestCommitFiles:
         """Test commit failure handling."""
         mock_github_request.side_effect = Exception("API Error")
         
-        result = commit_files(
+        result = commit_files_impl(
             message="Test commit",
             files=[{"path": "test.txt", "content": "Hello"}],
             owner="testowner",
@@ -117,7 +117,7 @@ class TestCommitFiles:
 
 
 class TestDeleteFiles:
-    """Test the delete_files function."""
+    """Test the delete_files_impl function."""
     
     @patch('github_file_ops_server.make_github_request')
     def test_successful_delete(self, mock_github_request):
@@ -144,7 +144,7 @@ class TestDeleteFiles:
             {"ref": "refs/heads/main"}
         ]
         
-        result = delete_files(
+        result = delete_files_impl(
             message="Delete files",
             paths=["delete.txt", "also-delete.txt"],
             owner="testowner",
@@ -189,7 +189,7 @@ class TestDeleteFiles:
             {"ref": "refs/heads/main"}
         ]
         
-        result = delete_files(
+        result = delete_files_impl(
             message="Delete files",
             paths=["nonexistent.txt"],
             owner="testowner",
@@ -206,7 +206,7 @@ class TestDeleteFiles:
         """Test delete failure handling."""
         mock_github_request.side_effect = Exception("API Error")
         
-        result = delete_files(
+        result = delete_files_impl(
             message="Delete files",
             paths=["test.txt"],
             owner="testowner",
