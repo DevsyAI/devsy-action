@@ -41,8 +41,7 @@ def get_base_tools(mode: str = None) -> str:
     if mode == "pr-update":
         base_tools.extend([
             "mcp__github-file-ops__commit_files",
-            "mcp__github-file-ops__delete_files",
-            "mcp__github-file-ops__push_changes"  # Keep as legacy option
+            "mcp__github-file-ops__delete_files"
         ])
     
     return ",".join(base_tools)

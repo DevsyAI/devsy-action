@@ -192,11 +192,6 @@ You have access to GitHub MCP tools for committing local file changes via GitHub
   - Deletes specified files from the remote repository
   - Use when files need to be removed entirely
 
-#### Legacy Tool (Fallback)
-- **`mcp__github-file-ops__push_changes`**: Direct content push (legacy)
-  - **Usage**: `mcp__github-file-ops__push_changes(message="Update", files=[{"path": "file.py", "content": "..."}], delete_paths=["old.py"])`
-  - Pushes content directly without reading from local filesystem
-  - Use only if the primary tools fail
 
 ### Complete Workflow Example
 
@@ -292,7 +287,6 @@ All requested changes have been implemented. The PR is ready for re-review.
   1. Verify files exist locally using `LS` tool
   2. Check file paths are correct and accessible
   3. Retry with correct file paths
-  4. Use `mcp__github-file-ops__push_changes` as fallback if needed
 
 **File Not Found Errors:**
 - MCP tools expect files to exist in the local working directory
