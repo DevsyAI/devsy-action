@@ -12,6 +12,7 @@ import os
 import sys
 import json
 import base64
+import subprocess
 from typing import List, Dict, Any, Optional
 from datetime import datetime
 import requests
@@ -324,22 +325,60 @@ def delete_files_impl(
         }
 
 
+def extract_local_commit_info(commit_ref: str = "HEAD") -> Dict[str, Any]:
+    """Extract all details from a local commit."""
+    
+    try:
+        # Get commit message
+        message = subprocess.run(
+            ["git", "log", "-1", "--pretty=%B", commit_ref],
+            capture_output=True, text=True, check=True, cwd=os.getcwd()
+        ).stdout.strip()
+        
+        # Get author info
+        author_name = subprocess.run(
+            ["git", "log", "-1", "--pretty=%an", commit_ref],
+            capture_output=True, text=True, check=True, cwd=os.getcwd()
+        ).stdout.strip()
+        
+        author_email = subprocess.run(
+            ["git", "log", "-1", "--pretty=%ae", commit_ref],
+            capture_output=True, text=True, check=True, cwd=os.getcwd()
+        ).stdout.strip()
+        
+        # Get list of files changed in this commit
+        changed_files_output = subprocess.run(
+            ["git", "diff-tree", "--no-commit-id", "--name-only", "-r", commit_ref],
+            capture_output=True, text=True, check=True, cwd=os.getcwd()
+        ).stdout.strip()
+        
+        changed_files = [f for f in changed_files_output.split('\n') if f.strip()]
+        
+        return {
+            "message": message,
+            "author_name": author_name,
+            "author_email": author_email,
+            "files": changed_files
+        }
+    except subprocess.CalledProcessError as e:
+        raise Exception(f"Failed to extract commit info: {e.stderr}")
+
+
 def push_changes_impl(
-    message: str,
-    files: List[Dict[str, str]] = None,
-    delete_paths: List[str] = None,
+    commit_ref: str = "HEAD",
     owner: Optional[str] = None,
     repo: Optional[str] = None,
     branch: Optional[str] = None,
     github_token: Optional[str] = None
 ) -> Dict[str, Any]:
     """
-    Push file changes to a GitHub repository (simulates git add/rm/commit/push).
+    Recreate a local commit on GitHub via API.
+    
+    This tool reads a local commit (including files modified by pre-commit hooks)
+    and recreates it on GitHub using the GitHub API, ensuring checks are triggered.
     
     Args:
-        message: Commit message
-        files: List of file dictionaries with 'path' and 'content' keys to add/update
-        delete_paths: List of file paths to delete
+        commit_ref: Git reference to recreate (default: HEAD)
         owner: Repository owner (optional, defaults to env var)
         repo: Repository name (optional, defaults to env var)
         branch: Branch name (optional, defaults to env var)
@@ -348,6 +387,7 @@ def push_changes_impl(
     Returns:
         Dictionary with commit details including SHA and URL
     """
+    
     # Use environment variables as defaults
     owner = owner or os.environ.get('REPO_OWNER')
     repo = repo or os.environ.get('REPO_NAME')
@@ -360,16 +400,19 @@ def push_changes_impl(
             "error": "Missing required parameters: owner, repo, branch, or github_token"
         }
     
-    if not files and not delete_paths:
-        return {
-            "success": False,
-            "error": "No files to commit or delete"
-        }
-    
     base_url = f"https://api.github.com/repos/{owner}/{repo}"
     
     try:
-        # Get the current branch reference
+        # Extract local commit details
+        commit_info = extract_local_commit_info(commit_ref)
+        
+        if not commit_info["files"]:
+            return {
+                "success": False,
+                "error": "No files changed in the specified commit"
+            }
+        
+        # Get current remote state
         ref_data = make_github_request(
             "GET",
             f"{base_url}/git/refs/heads/{branch}",
@@ -377,7 +420,7 @@ def push_changes_impl(
         )
         base_sha = ref_data["object"]["sha"]
         
-        # Get the base commit
+        # Get base tree
         base_commit = make_github_request(
             "GET",
             f"{base_url}/git/commits/{base_sha}",
@@ -385,40 +428,48 @@ def push_changes_impl(
         )
         base_tree_sha = base_commit["tree"]["sha"]
         
+        # Create blobs for all files in the working directory that were changed
         tree_entries = []
-        
-        # Handle file additions/updates
-        if files:
-            for file in files:
-                # Create a blob for the file content
+        for file_path in commit_info["files"]:
+            if os.path.exists(file_path):
+                # File exists - read current content (reflects pre-commit hook changes)
+                try:
+                    with open(file_path, 'r', encoding='utf-8') as f:
+                        content = f.read()
+                    encoding = "utf-8"
+                except UnicodeDecodeError:
+                    # Handle binary files
+                    with open(file_path, 'rb') as f:
+                        content = base64.b64encode(f.read()).decode('utf-8')
+                    encoding = "base64"
+                
+                # Create blob
                 blob_data = make_github_request(
                     "POST",
                     f"{base_url}/git/blobs",
                     github_token,
                     {
-                        "content": file["content"],
-                        "encoding": "utf-8"
+                        "content": content,
+                        "encoding": encoding
                     }
                 )
                 
                 tree_entries.append({
-                    "path": file["path"],
+                    "path": file_path,
                     "mode": "100644",  # Regular file
                     "type": "blob",
                     "sha": blob_data["sha"]
                 })
-        
-        # Handle file deletions
-        if delete_paths:
-            for path in delete_paths:
+            else:
+                # File doesn't exist - this was a deletion
                 tree_entries.append({
-                    "path": path,
+                    "path": file_path,
                     "mode": "100644",
                     "type": "blob",
                     "sha": None  # Setting sha to null deletes the file
                 })
         
-        # Create a new tree with base_tree to preserve existing files
+        # Create tree
         tree_data = make_github_request(
             "POST",
             f"{base_url}/git/trees",
@@ -430,20 +481,24 @@ def push_changes_impl(
         )
         new_tree_sha = tree_data["sha"]
         
-        # Create the commit
+        # Create commit with original message and author
         commit_data = make_github_request(
             "POST",
             f"{base_url}/git/commits",
             github_token,
             {
-                "message": message,
+                "message": commit_info["message"],
                 "tree": new_tree_sha,
-                "parents": [base_sha]
+                "parents": [base_sha],
+                "author": {
+                    "name": commit_info["author_name"],
+                    "email": commit_info["author_email"]
+                }
             }
         )
         new_commit_sha = commit_data["sha"]
         
-        # Update the branch reference
+        # Update branch reference
         ref_update = make_github_request(
             "PATCH",
             f"{base_url}/git/refs/heads/{branch}",
@@ -454,14 +509,22 @@ def push_changes_impl(
             }
         )
         
-        added_count = len(files) if files else 0
-        deleted_count = len(delete_paths) if delete_paths else 0
+        # Get original local commit SHA for reference
+        try:
+            original_sha = subprocess.run(
+                ["git", "rev-parse", commit_ref],
+                capture_output=True, text=True, check=True, cwd=os.getcwd()
+            ).stdout.strip()
+        except subprocess.CalledProcessError:
+            original_sha = "unknown"
         
         return {
             "success": True,
-            "sha": new_commit_sha,
+            "original_local_sha": original_sha,
+            "github_sha": new_commit_sha,
             "url": commit_data["html_url"],
-            "message": f"Successfully committed {added_count} file(s) and deleted {deleted_count} file(s)"
+            "message": f"Successfully recreated local commit with {len(commit_info['files'])} file(s)",
+            "files_changed": commit_info["files"]
         }
         
     except Exception as e:
@@ -562,38 +625,13 @@ async def handle_list_tools() -> list[types.Tool]:
         ),
         types.Tool(
             name="push_changes",
-            description="Push file changes to GitHub repository (legacy - simulates git add/rm/commit/push)",
+            description="Recreate a local git commit on GitHub via API (includes pre-commit hook changes)",
             inputSchema={
                 "type": "object",
                 "properties": {
-                    "message": {
+                    "commit_ref": {
                         "type": "string",
-                        "description": "Commit message"
-                    },
-                    "files": {
-                        "type": "array",
-                        "description": "List of files to add/update (optional)",
-                        "items": {
-                            "type": "object",
-                            "properties": {
-                                "path": {
-                                    "type": "string",
-                                    "description": "File path"
-                                },
-                                "content": {
-                                    "type": "string",
-                                    "description": "File content"
-                                }
-                            },
-                            "required": ["path", "content"]
-                        }
-                    },
-                    "delete_paths": {
-                        "type": "array",
-                        "description": "List of file paths to delete (optional)",
-                        "items": {
-                            "type": "string"
-                        }
+                        "description": "Git reference to recreate (default: HEAD)"
                     },
                     "owner": {
                         "type": "string",
@@ -611,8 +649,7 @@ async def handle_list_tools() -> list[types.Tool]:
                         "type": "string",
                         "description": "GitHub token (optional, defaults to env var)"
                     }
-                },
-                "required": ["message"]
+                }
             }
         )
     ]
