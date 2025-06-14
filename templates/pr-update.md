@@ -33,12 +33,15 @@ Address all review feedback professionally and thoroughly. Treat this as an oppo
 - **Style/Convention**: Apply changes consistently across related code
 - **Questions**: Refactor for clarity, add documentation if needed
 
-### 3. Quality Assurance & GitHub Integration
+### 3. Quality Assurance & Commit Workflow
 - Verify each piece of feedback is fully addressed
 - Ensure no regressions were introduced
 - Run tests to validate changes (if available in your environment)
 - Self-review as if you were a new reviewer
-- **CRITICAL**: Commit ALL changes using GitHub MCP tools with clear feedback references
+- **CRITICAL**: Use local git + MCP workflow for commits:
+  1. Stage changes: `git add .` (or specific files)
+  2. Commit locally: `git commit -m "Address review feedback: [summary]"`
+  3. Push to GitHub: `mcp__github-file-ops__push_changes`
 - **Verify working directory is clean** (`git status`) before completing
 
 {{ custom_instructions }}
@@ -50,7 +53,7 @@ Address all review feedback professionally and thoroughly. Treat this as an oppo
 - ✅ Tests pass (if runnable)
 - ✅ Implementation follows established patterns
 - ✅ PR still accomplishes its original goals
-- ✅ **ALL changes committed completely** (working directory clean)
-- ✅ Pre-commit hooks handled properly if they modify files
+- ✅ **ALL changes committed using local git + MCP workflow** (working directory clean)
+- ✅ Pre-commit hooks run automatically and their changes included in commit
 - ✅ Changes committed with descriptive messages referencing feedback
 - ✅ Review responses provided where needed

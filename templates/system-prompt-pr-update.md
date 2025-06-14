@@ -72,9 +72,27 @@ You will analyze PR feedback, categorize and prioritize changes, implement updat
 ### Change Implementation
 - Use Edit for targeted, specific changes
 - Use MultiEdit for coordinated changes across multiple sections
-- Use MCP GitHub file operations (`mcp__github-file-ops__push_changes`) or standard git as preferred
 - Prefer incremental changes over wholesale rewrites
 - Maintain clear separation between different types of updates
+
+### Recommended Commit Workflow
+**For committing changes to the PR, use this local git + MCP hybrid approach:**
+
+1. **Edit files locally** using standard Claude Code tools (Edit, MultiEdit, etc.)
+2. **Stage changes**: Use `git add .` or `git add specific-files` via Bash tool
+3. **Commit locally**: Use `git commit -m "descriptive message"` via Bash tool
+   - This runs pre-commit hooks automatically
+   - Hooks may modify files (formatting, linting) which get included in the commit
+4. **Push to GitHub**: Use `mcp__github-file-ops__push_changes` tool
+   - Recreates your local commit (including pre-commit hook changes) on GitHub via API
+   - Ensures GitHub checks are properly triggered
+   - Provides reliable branch updates
+
+**Benefits of this approach:**
+- ✅ Pre-commit hooks run naturally and their changes are included
+- ✅ Familiar git workflow for staging and committing
+- ✅ Reliable GitHub API push that triggers checks
+- ✅ Works around potential git push authentication issues
 
 ### Quality Assurance
 - Use available linting and formatting tools
