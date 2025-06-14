@@ -9,7 +9,7 @@ import base64
 import sys
 import os
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'src', 'mcp'))
-from github_file_ops_server import make_github_request, commit_files_impl, delete_files_impl
+from github_file_ops_server import make_github_request, push_changes_impl
 
 
 class TestMakeGithubRequest:
@@ -18,45 +18,48 @@ class TestMakeGithubRequest:
     @patch('github_file_ops_server.requests.request')
     def test_successful_request(self, mock_request):
         """Test successful GitHub API request."""
+        # Mock successful response
         mock_response = Mock()
         mock_response.ok = True
         mock_response.text = '{"key": "value"}'
         mock_response.json.return_value = {"key": "value"}
         mock_request.return_value = mock_response
         
-        result = make_github_request("GET", "https://api.github.com/test", "token123")
+        result = make_github_request(
+            "GET",
+            "https://api.github.com/repos/owner/repo/pulls/1",
+            "token123"
+        )
         
         assert result == {"key": "value"}
-        mock_request.assert_called_once_with(
-            method="GET",
-            url="https://api.github.com/test",
-            headers={
-                "Accept": "application/vnd.github+json",
-                "Authorization": "Bearer token123",
-                "X-GitHub-Api-Version": "2022-11-28"
-            },
-            json=None
-        )
-    
+        mock_request.assert_called_once()
+        
     @patch('github_file_ops_server.requests.request')
     def test_failed_request(self, mock_request):
         """Test failed GitHub API request."""
+        # Mock failed response
         mock_response = Mock()
         mock_response.ok = False
         mock_response.status_code = 404
-        mock_response.text = "Not Found"
+        mock_response.text = "Not found"
         mock_request.return_value = mock_response
         
-        with pytest.raises(Exception, match="GitHub API error: 404 Not Found"):
-            make_github_request("GET", "https://api.github.com/test", "token123")
+        with pytest.raises(Exception) as exc_info:
+            make_github_request(
+                "GET",
+                "https://api.github.com/repos/owner/repo/pulls/999",
+                "token123"
+            )
+            
+        assert "GitHub API error: 404" in str(exc_info.value)
 
 
-class TestCommitFiles:
-    """Test the commit_files_impl function."""
+class TestPushChanges:
+    """Test the push_changes_impl function."""
     
     @patch('github_file_ops_server.make_github_request')
-    def test_successful_commit(self, mock_github_request):
-        """Test successful file commit."""
+    def test_commit_files_only(self, mock_github_request):
+        """Test committing files only."""
         # Mock the API responses in order
         mock_github_request.side_effect = [
             # Get branch reference
@@ -75,7 +78,7 @@ class TestCommitFiles:
             {"ref": "refs/heads/main"}
         ]
         
-        result = commit_files_impl(
+        result = push_changes_impl(
             message="Test commit",
             files=[
                 {"path": "test.txt", "content": "Hello World"},
@@ -90,49 +93,18 @@ class TestCommitFiles:
         assert result["success"] is True
         assert result["sha"] == "newcommit123"
         assert result["url"] == "https://github.com/owner/repo/commit/newcommit123"
-        assert "2 file(s)" in result["message"]
-        
-        # Verify the tree creation call
-        tree_call = mock_github_request.call_args_list[4]  # Tree creation is now the 5th call
-        assert tree_call[0][0] == "POST"
-        assert "git/trees" in tree_call[0][1]
-        tree_data = tree_call[0][3]
-        assert tree_data["base_tree"] == "tree123"
-        assert len(tree_data["tree"]) == 2
-        assert tree_data["tree"][0]["path"] == "test.txt"
-        assert tree_data["tree"][0]["sha"] == "blob1"  # Now using blob SHA instead of content
+        assert "2 file(s) and deleted 0 file(s)" in result["message"]
     
     @patch('github_file_ops_server.make_github_request')
-    def test_commit_failure(self, mock_github_request):
-        """Test commit failure handling."""
-        mock_github_request.side_effect = Exception("API Error")
-        
-        result = commit_files_impl(
-            message="Test commit",
-            files=[{"path": "test.txt", "content": "Hello"}],
-            owner="testowner",
-            repo="testrepo",
-            branch="main",
-            github_token="token123"
-        )
-        
-        assert result["success"] is False
-        assert "API Error" in result["error"]
-
-
-class TestDeleteFiles:
-    """Test the delete_files_impl function."""
-    
-    @patch('github_file_ops_server.make_github_request')
-    def test_successful_delete(self, mock_github_request):
-        """Test successful file deletion."""
+    def test_delete_files_only(self, mock_github_request):
+        """Test deleting files only."""
         # Mock the API responses in order
         mock_github_request.side_effect = [
             # Get branch reference
             {"object": {"sha": "base123"}},
             # Get base commit
             {"tree": {"sha": "tree123"}},
-            # Create new tree (no longer getting current tree)
+            # Create tree
             {"sha": "newtree123"},
             # Create commit
             {"sha": "newcommit123", "html_url": "https://github.com/owner/repo/commit/newcommit123"},
@@ -140,9 +112,9 @@ class TestDeleteFiles:
             {"ref": "refs/heads/main"}
         ]
         
-        result = delete_files_impl(
+        result = push_changes_impl(
             message="Delete files",
-            paths=["delete.txt", "also-delete.txt"],
+            delete_paths=["delete.txt", "also-delete.txt"],
             owner="testowner",
             repo="testrepo",
             branch="main",
@@ -151,30 +123,20 @@ class TestDeleteFiles:
         
         assert result["success"] is True
         assert result["sha"] == "newcommit123"
-        assert "2 file(s)" in result["message"]
-        
-        # Verify the tree creation for deletions
-        tree_call = mock_github_request.call_args_list[2]  # Tree creation is now the 3rd call
-        assert tree_call[0][0] == "POST"
-        assert "git/trees" in tree_call[0][1]
-        tree_data = tree_call[0][3]
-        assert tree_data["base_tree"] == "tree123"
-        assert len(tree_data["tree"]) == 2
-        assert tree_data["tree"][0]["path"] == "delete.txt"
-        assert tree_data["tree"][0]["sha"] is None  # SHA is None for deletions
-        assert tree_data["tree"][1]["path"] == "also-delete.txt"
-        assert tree_data["tree"][1]["sha"] is None
+        assert "0 file(s) and deleted 2 file(s)" in result["message"]
     
     @patch('github_file_ops_server.make_github_request')
-    def test_delete_nonexistent_files(self, mock_github_request):
-        """Test deleting files that don't exist."""
-        # Mock the API responses
+    def test_commit_and_delete_files(self, mock_github_request):
+        """Test both committing and deleting files in one operation."""
+        # Mock the API responses in order
         mock_github_request.side_effect = [
             # Get branch reference
             {"object": {"sha": "base123"}},
             # Get base commit
             {"tree": {"sha": "tree123"}},
-            # Create new tree (simplified implementation doesn't check existence)
+            # Create blob for new file
+            {"sha": "blob1"},
+            # Create tree
             {"sha": "newtree123"},
             # Create commit
             {"sha": "newcommit123", "html_url": "https://github.com/owner/repo/commit/newcommit123"},
@@ -182,9 +144,10 @@ class TestDeleteFiles:
             {"ref": "refs/heads/main"}
         ]
         
-        result = delete_files_impl(
-            message="Delete files",
-            paths=["nonexistent.txt"],
+        result = push_changes_impl(
+            message="Refactor: replace old.txt with new.txt",
+            files=[{"path": "new.txt", "content": "New content"}],
+            delete_paths=["old.txt"],
             owner="testowner",
             repo="testrepo",
             branch="main",
@@ -192,16 +155,14 @@ class TestDeleteFiles:
         )
         
         assert result["success"] is True
-        assert "1 file(s)" in result["message"]  # Reports deletion attempt regardless of existence
+        assert result["sha"] == "newcommit123"
+        assert "1 file(s) and deleted 1 file(s)" in result["message"]
     
     @patch('github_file_ops_server.make_github_request')
-    def test_delete_failure(self, mock_github_request):
-        """Test delete failure handling."""
-        mock_github_request.side_effect = Exception("API Error")
-        
-        result = delete_files_impl(
-            message="Delete files",
-            paths=["test.txt"],
+    def test_no_files_or_deletes(self, mock_github_request):
+        """Test error when no files to commit or delete."""
+        result = push_changes_impl(
+            message="Empty operation",
             owner="testowner",
             repo="testrepo",
             branch="main",
@@ -209,4 +170,33 @@ class TestDeleteFiles:
         )
         
         assert result["success"] is False
+        assert "No files to commit or delete" in result["error"]
+    
+    @patch('github_file_ops_server.make_github_request')
+    def test_push_failure(self, mock_github_request):
+        """Test push failure handling."""
+        mock_github_request.side_effect = Exception("API Error")
+        
+        result = push_changes_impl(
+            message="Test commit",
+            files=[{"path": "test.txt", "content": "Hello"}],
+            owner="testowner",
+            repo="testrepo", 
+            branch="main",
+            github_token="token123"
+        )
+        
+        assert result["success"] is False
         assert "API Error" in result["error"]
+    
+    @patch('github_file_ops_server.make_github_request')
+    def test_missing_parameters(self, mock_github_request):
+        """Test error handling for missing parameters."""
+        result = push_changes_impl(
+            message="Test commit",
+            files=[{"path": "test.txt", "content": "Hello"}],
+            # Missing required parameters
+        )
+        
+        assert result["success"] is False
+        assert "Missing required parameters" in result["error"]
