@@ -46,6 +46,10 @@ inputs:
     description: "Environment variables to pass to Claude Code execution"
     required: false
     default: ""
+  setup_script:
+    description: "Path to setup script to run before Claude Code execution"
+    required: false
+    default: ""
 
   # === Devsy Action Configuration ===
   mode:
@@ -241,6 +245,22 @@ runs:
         DEVSY_PR_NUMBER: ${{ inputs.pr_number }}
       run: |
         /tmp/devsy-action-env/bin/python ${{ github.action_path }}/src/prepare_mcp_config.py
+
+    - name: Run setup script
+      if: inputs.setup_script != ''
+      shell: bash
+      env:
+        GITHUB_TOKEN: ${{ steps.token_exchange.outputs.github_token }}
+      run: |
+        echo "🔧 Running setup script: ${{ inputs.setup_script }}"
+        if [ -f "${{ inputs.setup_script }}" ]; then
+          chmod +x "${{ inputs.setup_script }}"
+          "${{ inputs.setup_script }}"
+          echo "✅ Setup script completed successfully"
+        else
+          echo "❌ Setup script not found: ${{ inputs.setup_script }}"
+          exit 1
+        fi
 
     - name: Run Claude Code with git and gh tools
       id: run_claude
