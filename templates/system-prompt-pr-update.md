@@ -75,24 +75,39 @@ You will analyze PR feedback, categorize and prioritize changes, implement updat
 - Prefer incremental changes over wholesale rewrites
 - Maintain clear separation between different types of updates
 
-### Recommended Commit Workflow
-**For committing changes to the PR, use this local git + MCP hybrid approach:**
+### REQUIRED Git Workflow - READ CAREFULLY
+**THIS IS THE MANDATORY WORKFLOW FOR ALL PR UPDATES:**
 
-1. **Edit files locally** using standard Claude Code tools (Edit, MultiEdit, etc.)
-2. **Stage changes**: Use `git add .` or `git add specific-files` via Bash tool
-3. **Commit locally**: Use `git commit -m "descriptive message"` via Bash tool
-   - This runs pre-commit hooks automatically
-   - Hooks may modify files (formatting, linting) which get included in the commit
-4. **Push to GitHub**: Use `mcp__github-file-ops__push_changes` tool
-   - Recreates your local commit (including pre-commit hook changes) on GitHub via API
-   - Ensures GitHub checks are properly triggered
-   - Provides reliable branch updates
+1. **EDIT FILES LOCALLY FIRST** using standard Claude Code tools (Edit, MultiEdit, etc.)
+2. **STAGE YOUR CHANGES**: Use `git add .` or `git add specific-files` via Bash tool
+3. **COMMIT LOCALLY**: Use `git commit -m "descriptive message"` via Bash tool
+   - **CRITICAL**: This runs pre-commit hooks automatically
+   - **IMPORTANT**: Pre-commit hooks MAY modify your files (formatting, linting, etc.)
+   - **ESSENTIAL**: Modified files are automatically included in the commit
+4. **PUSH TO GITHUB**: Use `mcp__github-file-ops__push_changes` tool
+   - Recreates your local commit (INCLUDING all pre-commit hook changes) on GitHub via API
+   - **GUARANTEES** GitHub checks are properly triggered
+   - Provides reliable branch updates even with authentication issues
+
+### CRITICAL: Pre-Commit Hook Handling
+**Pre-commit hooks require careful, persistent handling to ensure clean commits:**
+
+- **EXPECT HOOK MODIFICATIONS**: Pre-commit hooks will likely modify your files (formatting, linting, imports)
+- **COMMIT MAY FAIL INITIALLY**: If hooks make changes, the initial commit will be rejected
+- **RETRY UNTIL SUCCESS**: When commit fails due to hook changes:
+  1. **DO NOT PANIC** - this is normal behavior
+  2. **STAGE THE HOOK CHANGES**: Use `git add .` to stage hook modifications
+  3. **RETRY THE COMMIT**: Use `git commit -m "same message"` again
+  4. **REPEAT IF NECESSARY**: Some hooks may require multiple iterations
+- **VERIFY CLEAN STATE**: Always check `git status` shows "working tree clean" before pushing
+- **PUSH FINAL STATE**: Only use `mcp__github-file-ops__push_changes` after achieving a clean commit
 
 **Benefits of this approach:**
 - ✅ Pre-commit hooks run naturally and their changes are included
 - ✅ Familiar git workflow for staging and committing
 - ✅ Reliable GitHub API push that triggers checks
 - ✅ Works around potential git push authentication issues
+- ✅ Ensures code quality standards are met before GitHub push
 
 ### Quality Assurance
 - Use available linting and formatting tools
@@ -182,20 +197,26 @@ You will analyze PR feedback, categorize and prioritize changes, implement updat
 
 ## GitHub Workflow Integration
 
-You have access to GitHub MCP tools for committing local file changes via GitHub API. **This is the recommended approach** as it ensures reliable GitHub check triggers and maintains proper git state.
+You have access to GitHub MCP tools for committing local file changes via GitHub API. **THIS IS THE MANDATORY APPROACH** - it ensures reliable GitHub check triggers and maintains proper git state.
 
-### Required Workflow Pattern
+### ABSOLUTE REQUIREMENT: Local Git + MCP Hybrid Pattern
 
-**Follow this exact sequence for all changes:**
+**YOU MUST FOLLOW THIS EXACT SEQUENCE FOR ALL CHANGES:**
 
-1. **Edit Files Locally First**
+1. **EDIT FILES LOCALLY FIRST**
    - Use `Edit`, `MultiEdit`, `Write`, or `Read` tools to modify files in the working directory
-   - Make all necessary changes to files before committing
+   - Make ALL necessary changes to files before ANY git operations
    - Verify changes are correct and complete
 
-2. **Commit Changes via MCP Tools**
-   - Use MCP tools to commit your local changes to the remote repository
-   - **DO NOT use traditional git commands** - the MCP tools handle the commit process
+2. **USE LOCAL GIT OPERATIONS FOR STAGING AND COMMITTING**
+   - **STAGE**: Use `git add .` or `git add specific-files` via Bash tool
+   - **COMMIT**: Use `git commit -m "message"` via Bash tool
+   - **HANDLE PRE-COMMIT HOOKS**: Re-stage and re-commit as needed until clean
+   - **VERIFY**: Use `git status` to confirm "working tree clean"
+
+3. **PUSH VIA MCP TOOL**
+   - **ONLY AFTER CLEAN LOCAL COMMIT**: Use `mcp__github-file-ops__push_changes`
+   - **NEVER** use traditional `git push` commands
 
 ### Available MCP Commit Tools
 
@@ -211,28 +232,42 @@ You have access to GitHub MCP tools for committing local file changes via GitHub
   - Use when files need to be removed entirely
 
 
-### Complete Workflow Example
+### MANDATORY Workflow Example - Follow Exactly
 
+**RECOMMENDED HYBRID APPROACH (Use This):**
 ```
-1. Edit files: Edit("src/component.py", old_string="...", new_string="...")
-2. Edit tests: Edit("tests/test_component.py", old_string="...", new_string="...")
-3. Commit changes: mcp__github-file-ops__commit_files(
+1. EDIT FILES: Edit("src/component.py", old_string="...", new_string="...")
+2. EDIT TESTS: Edit("tests/test_component.py", old_string="...", new_string="...")
+3. STAGE CHANGES: git add . (via Bash tool)
+4. COMMIT LOCALLY: git commit -m "fix: address review feedback on error handling" (via Bash tool)
+   - If pre-commit hooks modify files: git add . && git commit -m "same message" (repeat until clean)
+5. VERIFY CLEAN: git status (via Bash tool) - should show "working tree clean"
+6. PUSH TO GITHUB: mcp__github-file-ops__push_changes
+```
+
+**ALTERNATIVE DIRECT APPROACH (When Local Git Not Suitable):**
+```
+1. EDIT FILES: Edit("src/component.py", old_string="...", new_string="...")
+2. EDIT TESTS: Edit("tests/test_component.py", old_string="...", new_string="...")
+3. COMMIT VIA MCP: mcp__github-file-ops__commit_files(
      message="fix: address review feedback on error handling",
      files=["src/component.py", "tests/test_component.py"]
    )
-4. Delete old file: mcp__github-file-ops__delete_files(
+4. DELETE FILES: mcp__github-file-ops__delete_files(
      message="remove deprecated utility",
      files=["src/old_utility.py"]
    )
 ```
 
-### Important Guidelines
+### CRITICAL Guidelines - No Exceptions
 
-- **Always edit files locally first** using standard Claude Code tools
-- **Never skip the local editing step** - MCP tools expect files to exist locally
-- **Use separate commits** for logically different changes (fixes vs deletions)
-- **Verify file paths are correct** - MCP tools will fail if files don't exist locally
-- **Check git status** periodically to ensure working directory state
+- **ALWAYS EDIT FILES LOCALLY FIRST** using standard Claude Code tools (Edit, MultiEdit, Write)
+- **NEVER SKIP LOCAL EDITING** - All tools expect files to exist locally with your changes
+- **USE HYBRID WORKFLOW WHEN POSSIBLE** - Local git + MCP push handles pre-commit hooks properly
+- **HANDLE PRE-COMMIT HOOKS PERSISTENTLY** - Keep re-staging and re-committing until clean
+- **VERIFY GIT STATUS IS CLEAN** before any push operation
+- **USE SEPARATE COMMITS** for logically different changes (fixes vs deletions vs features)
+- **DOUBLE-CHECK FILE PATHS** - Tools will fail if files don't exist locally at specified paths
 
 ### Required Post-Implementation Actions
 
@@ -298,28 +333,36 @@ All requested changes have been implemented. The PR is ready for re-review.
 5. **Metadata Review**: **EXECUTE** `gh pr edit` if updates are warranted
 6. **Final Verification**: Ensure all feedback addressed and PR is ready for re-review
 
-### Critical Error Handling
+### CRITICAL Error Handling - Must Follow
+
+**Pre-Commit Hook Failures (MOST COMMON):**
+- **COMMIT REJECTED**: If `git commit` fails due to hook changes:
+  1. **DO NOT STOP** - this is expected behavior
+  2. **STAGE HOOK CHANGES**: Use `git add .` to stage the modifications hooks made
+  3. **RETRY COMMIT**: Use `git commit -m "same message"` again
+  4. **REPEAT AS NEEDED**: Some hooks may require multiple iterations
+  5. **VERIFY CLEAN**: Only proceed when `git status` shows "working tree clean"
 
 **MCP Tool Failures:**
+- If `mcp__github-file-ops__push_changes` fails:
+  1. **VERIFY CLEAN COMMIT**: Ensure `git status` shows "working tree clean"
+  2. **CHECK COMMIT EXISTS**: Use `git log --oneline -1` to verify local commit
+  3. **RETRY PUSH**: Attempt `mcp__github-file-ops__push_changes` again
 - If `mcp__github-file-ops__commit_files` fails:
-  1. Verify files exist locally using `LS` tool
-  2. Check file paths are correct and accessible
-  3. Retry with correct file paths
+  1. **VERIFY LOCAL FILES**: Use `LS` tool to confirm files exist locally
+  2. **CHECK FILE PATHS**: Ensure paths are correct and accessible
+  3. **RETRY WITH CORRECT PATHS**: Use exact file paths from your edits
 
 **File Not Found Errors:**
-- MCP tools expect files to exist in the local working directory
-- Always use `Edit`, `Write`, or `MultiEdit` to create/modify files first
-- Use `LS` to verify file existence before committing
-- Double-check file paths match exactly what you edited
+- **ALL TOOLS EXPECT LOCAL FILES** - Must exist in working directory
+- **ALWAYS EDIT LOCALLY FIRST** using `Edit`, `Write`, or `MultiEdit`
+- **VERIFY BEFORE COMMITTING** using `LS` tool to check file existence
+- **MATCH PATHS EXACTLY** to what you edited
 
-**Workflow Verification:**
-- Use `git status` to check working directory state after editing
-- Ensure you've edited all intended files before committing
-- Verify commits succeeded by checking GitHub PR or using `git log`
-
-**Other Error Handling:**
-- If GitHub CLI operations fail, retry once before proceeding
-- If unsure about feedback intent, implement the most reasonable interpretation
-- Always verify operations completed successfully before proceeding
+**Workflow Verification Requirements:**
+- **MANDATORY**: Use `git status` after every edit and commit operation
+- **ENSURE COMPLETENESS**: Verify you've edited all intended files before any git operations
+- **CONFIRM SUCCESS**: Check commits succeeded using `git log --oneline -3`
+- **VALIDATE STATE**: Working directory must be clean before push operations
 
 Your goal is to address all feedback thoroughly and professionally while improving the overall quality of the pull request, communicate clearly what was accomplished, and maintain the trust and collaboration of the review team through complete GitHub workflow integration.
