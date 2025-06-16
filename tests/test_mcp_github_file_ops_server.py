@@ -307,3 +307,235 @@ class TestPushChanges:
         assert "Missing required parameters" in result["error"]
 
 
+class TestPushChangesModeAware:
+    """Test mode-aware behavior for pr-gen vs pr-update modes."""
+    
+    @patch('github_file_ops_server.extract_local_commit_info')
+    @patch('github_file_ops_server.make_github_request')
+    @patch('github_file_ops_server.os.path.exists')
+    @patch('builtins.open')
+    @patch('github_file_ops_server.subprocess.run')
+    @patch.dict('github_file_ops_server.os.environ', {'DEVSY_BASE_BRANCH': 'development'})
+    def test_pr_gen_mode_creates_new_branch(self, mock_subprocess, mock_open, mock_exists, 
+                                          mock_github_request, mock_extract):
+        """Test pr-gen mode creates new branch using base branch as foundation."""
+        # Mock local commit extraction
+        mock_extract.return_value = {
+            "message": "feat: add new feature",
+            "author_name": "Claude",
+            "author_email": "claude@anthropic.com",
+            "files": ["src/feature.py"]
+        }
+        
+        # Mock file system
+        mock_exists.return_value = True
+        mock_open.return_value.__enter__.return_value.read.return_value = "# New feature code"
+        
+        # Mock git rev-parse
+        mock_subprocess.return_value = Mock(stdout="local123", returncode=0)
+        
+        # Mock GitHub API responses for pr-gen mode
+        mock_github_request.side_effect = [
+            # Get base branch (development) reference - pr-gen uses this as base
+            {"object": {"sha": "base_dev_123"}},
+            # Get base commit tree
+            {"tree": {"sha": "dev_tree_123"}},
+            # Create blob
+            {"sha": "blob123"},
+            # Create tree
+            {"sha": "newtree123"},
+            # Create commit
+            {"sha": "newcommit123", "html_url": "https://github.com/owner/repo/commit/newcommit123"},
+            # Create new branch reference (POST, not PATCH)
+            {"ref": "refs/heads/feat/new-feature"}
+        ]
+        
+        result = push_changes_impl(
+            commit_ref="HEAD",
+            owner="testowner",
+            repo="testrepo", 
+            branch="feat/new-feature",
+            github_token="token123",
+            mode="pr-gen"
+        )
+        
+        assert result["success"] is True
+        assert result["github_sha"] == "newcommit123"
+        
+        # Verify it used base branch (development) as foundation
+        base_branch_calls = [call for call in mock_github_request.call_args_list
+                           if len(call.args) >= 2 and "development" in call.args[1]]
+        assert len(base_branch_calls) == 1, "Should fetch base branch reference"
+        
+        # Verify it created new branch reference (POST to /git/refs)
+        create_ref_calls = [call for call in mock_github_request.call_args_list
+                          if len(call.args) >= 1 and call.args[0] == "POST" 
+                          and len(call.args) >= 2 and call.args[1].endswith("/git/refs")]
+        assert len(create_ref_calls) == 1, "Should create new branch reference"
+        
+        # Verify the POST data contains correct ref path
+        create_call = create_ref_calls[0]
+        ref_data = create_call.args[3]  # data parameter
+        assert ref_data["ref"] == "refs/heads/feat/new-feature"
+        assert ref_data["sha"] == "newcommit123"
+    
+    @patch('github_file_ops_server.extract_local_commit_info')
+    @patch('github_file_ops_server.make_github_request')
+    @patch('github_file_ops_server.os.path.exists')
+    @patch('builtins.open')
+    @patch('github_file_ops_server.subprocess.run')
+    def test_pr_update_mode_updates_existing_branch(self, mock_subprocess, mock_open, mock_exists,
+                                                   mock_github_request, mock_extract):
+        """Test pr-update mode updates existing branch directly."""
+        # Mock local commit extraction
+        mock_extract.return_value = {
+            "message": "fix: address review feedback",
+            "author_name": "Claude",
+            "author_email": "claude@anthropic.com",
+            "files": ["src/feature.py"]
+        }
+        
+        # Mock file system
+        mock_exists.return_value = True
+        mock_open.return_value.__enter__.return_value.read.return_value = "# Updated feature code"
+        
+        # Mock git rev-parse
+        mock_subprocess.return_value = Mock(stdout="local456", returncode=0)
+        
+        # Mock GitHub API responses for pr-update mode
+        mock_github_request.side_effect = [
+            # Get existing branch reference directly - pr-update expects branch to exist
+            {"object": {"sha": "existing_branch_123"}},
+            # Get base commit tree
+            {"tree": {"sha": "existing_tree_123"}},
+            # Create blob
+            {"sha": "blob456"},
+            # Create tree
+            {"sha": "newtree456"},
+            # Create commit
+            {"sha": "newcommit456", "html_url": "https://github.com/owner/repo/commit/newcommit456"},
+            # Update existing branch reference (PATCH, not POST)
+            {"ref": "refs/heads/feature-branch"}
+        ]
+        
+        result = push_changes_impl(
+            commit_ref="HEAD",
+            owner="testowner",
+            repo="testrepo",
+            branch="feature-branch",
+            github_token="token123",
+            mode="pr-update"
+        )
+        
+        assert result["success"] is True
+        assert result["github_sha"] == "newcommit456"
+        
+        # Verify it fetched existing branch reference directly
+        existing_branch_calls = [call for call in mock_github_request.call_args_list
+                               if len(call.args) >= 2 and "feature-branch" in call.args[1] 
+                               and call.args[0] == "GET"]
+        assert len(existing_branch_calls) == 1, "Should fetch existing branch reference"
+        
+        # Verify it updated branch reference (PATCH to /git/refs/heads/{branch})
+        update_ref_calls = [call for call in mock_github_request.call_args_list
+                          if len(call.args) >= 1 and call.args[0] == "PATCH"
+                          and len(call.args) >= 2 and "refs/heads/feature-branch" in call.args[1]]
+        assert len(update_ref_calls) == 1, "Should update existing branch reference"
+        
+        # Verify the PATCH data contains correct SHA
+        update_call = update_ref_calls[0]
+        update_data = update_call.args[3]  # data parameter
+        assert update_data["sha"] == "newcommit456"
+        assert update_data["force"] is False
+    
+    @patch('github_file_ops_server.extract_local_commit_info')
+    @patch('github_file_ops_server.make_github_request') 
+    @patch('github_file_ops_server.os.path.exists')
+    @patch('builtins.open')
+    @patch('github_file_ops_server.subprocess.run')
+    @patch.dict('github_file_ops_server.os.environ', {'DEVSY_BASE_BRANCH': 'main'})
+    def test_pr_gen_mode_with_default_base_branch(self, mock_subprocess, mock_open, mock_exists,
+                                                 mock_github_request, mock_extract):
+        """Test pr-gen mode uses default main branch when DEVSY_BASE_BRANCH not set."""
+        # Mock local commit extraction
+        mock_extract.return_value = {
+            "message": "feat: another feature",
+            "author_name": "Claude",
+            "author_email": "claude@anthropic.com", 
+            "files": ["src/another.py"]
+        }
+        
+        # Mock file system
+        mock_exists.return_value = True
+        mock_open.return_value.__enter__.return_value.read.return_value = "# Another feature"
+        
+        # Mock git rev-parse
+        mock_subprocess.return_value = Mock(stdout="local789", returncode=0)
+        
+        # Mock GitHub API responses
+        mock_github_request.side_effect = [
+            # Get main branch reference (default base)
+            {"object": {"sha": "main_branch_123"}},
+            # Get base commit tree
+            {"tree": {"sha": "main_tree_123"}},
+            # Create blob
+            {"sha": "blob789"},
+            # Create tree
+            {"sha": "newtree789"},
+            # Create commit
+            {"sha": "newcommit789", "html_url": "https://github.com/owner/repo/commit/newcommit789"},
+            # Create new branch reference
+            {"ref": "refs/heads/feat/another-feature"}
+        ]
+        
+        result = push_changes_impl(
+            commit_ref="HEAD",
+            owner="testowner",
+            repo="testrepo",
+            branch="feat/another-feature", 
+            github_token="token123",
+            mode="pr-gen"
+        )
+        
+        assert result["success"] is True
+        
+        # Verify it used main branch as base (default when DEVSY_BASE_BRANCH not set)
+        main_branch_calls = [call for call in mock_github_request.call_args_list
+                           if len(call.args) >= 2 and "refs/heads/main" in call.args[1] and call.args[0] == "GET"]
+        assert len(main_branch_calls) == 1, "Should fetch main branch reference as default base"
+    
+    @patch('github_file_ops_server.extract_local_commit_info')
+    @patch('github_file_ops_server.make_github_request')
+    @patch('github_file_ops_server.subprocess.run')
+    def test_mode_defaults_to_pr_update_for_backward_compatibility(self, mock_subprocess, 
+                                                                  mock_github_request, mock_extract):
+        """Test that when mode is not specified, it defaults to pr-update behavior."""
+        # Mock local commit extraction
+        mock_extract.return_value = {
+            "message": "test commit",
+            "author_name": "Test User",
+            "author_email": "test@example.com",
+            "files": []  # No files to avoid file system mocking
+        }
+        
+        # Mock git rev-parse
+        mock_subprocess.return_value = Mock(stdout="local999", returncode=0)
+        
+        # Mock GitHub API failure for no files
+        mock_github_request.side_effect = Exception("Should not be called")
+        
+        # Call without mode parameter
+        result = push_changes_impl(
+            commit_ref="HEAD",
+            owner="testowner", 
+            repo="testrepo",
+            branch="test-branch",
+            github_token="token123"
+            # No mode parameter - should default to pr-update
+        )
+        
+        # Should fail due to no files changed, but not due to mode issues
+        assert result["success"] is False
+        assert "No files changed" in result["error"]
+
+
