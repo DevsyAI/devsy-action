@@ -119,8 +119,18 @@ def push_changes_impl(
     # Use environment variables as defaults
     owner = owner or os.environ.get('REPO_OWNER')
     repo = repo or os.environ.get('REPO_NAME')
-    branch = branch or os.environ.get('BRANCH_NAME')
     github_token = github_token or os.environ.get('GITHUB_TOKEN')
+    
+    # Get current branch from git if not specified, rather than relying on env vars
+    if not branch:
+        try:
+            current_branch = subprocess.run(
+                ["git", "branch", "--show-current"],
+                capture_output=True, text=True, check=True, cwd=os.getcwd()
+            ).stdout.strip()
+            branch = current_branch or os.environ.get('BRANCH_NAME', 'main')
+        except subprocess.CalledProcessError:
+            branch = os.environ.get('BRANCH_NAME', 'main')
     
     if not all([owner, repo, branch, github_token]):
         return {
