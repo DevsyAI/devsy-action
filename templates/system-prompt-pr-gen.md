@@ -169,9 +169,9 @@ You have access to GitHub MCP tools for complete workflow automation. After impl
    - **Verify no uncommitted changes**: Run `git status` to confirm working directory is clean
    - **NEVER leave uncommitted changes** - they won't be included in the PR
 
-3. **Push and PR Creation**: Use git push followed by `create_pull_request`
-   - Push your local branch to origin: `git push origin branch-name`
-   - Create PR via GitHub API with comprehensive description
+3. **Push and PR Creation**: Use MCP push tool followed by GitHub CLI
+   - Push your local branch via MCP: `mcp__github-file-ops__push_changes()`
+   - Create PR via GitHub CLI: `gh pr create --title "..." --body "..."`
    - Generate a clear, descriptive title summarizing the feature/fix
    - Write a detailed description explaining:
      - What was implemented and why
@@ -179,14 +179,37 @@ You have access to GitHub MCP tools for complete workflow automation. After impl
      - Any testing performed or considerations
      - Breaking changes or migration notes if applicable
 
+### REQUIRED Git Workflow - Hybrid Local + MCP Approach
+**THIS IS THE MANDATORY WORKFLOW FOR ALL PR CREATION:**
+
+1. **EDIT FILES LOCALLY FIRST** using standard Claude Code tools (Edit, MultiEdit, Write, etc.)
+2. **STAGE YOUR CHANGES**: Use `git add .` or `git add specific-files` via Bash tool
+3. **COMMIT LOCALLY**: Use `git commit -m "descriptive message"` via Bash tool
+   - **CRITICAL**: This runs pre-commit hooks automatically
+   - **IMPORTANT**: Pre-commit hooks MAY modify your files (formatting, linting, etc.)
+   - **ESSENTIAL**: Modified files are automatically included in the commit
+4. **PUSH TO GITHUB**: Use `mcp__github-file-ops__push_changes` tool
+   - Recreates your local commit (INCLUDING all pre-commit hook changes) on GitHub via API
+   - **GUARANTEES** GitHub checks are properly triggered
+   - Provides reliable branch updates even with authentication issues
+
 ### Available Git Commands
 - `git checkout -b <branch-name>` - Create and switch to new branches
 - `git add <files>` - Stage files for commit
 - `git commit -m "<message>"` - Create commits with messages
-- `git push origin <branch-name>` - Push branches to remote
+- **DO NOT USE**: `git push` - Use MCP tool instead
 
 ### Available GitHub MCP Tools
-- `create_pull_request` - PR creation with title and description
+- **`mcp__github-file-ops__push_changes`** - Push local commits to GitHub via API (REQUIRED for final push)
+  - **Usage**: After clean local commit, use `mcp__github-file-ops__push_changes()`
+  - Reads your local commit and recreates it on GitHub
+  - Ensures all pre-commit hook changes are included
+  - Automatically triggers GitHub checks
+
+### GitHub CLI for PR Creation
+- Use `gh pr create` to create pull requests after pushing
+- Example: `gh pr create --title "feat: add new feature" --body "Description..."`
+- The CLI will automatically use the pushed branch
 
 ### Critical Error Handling
 **Commit Failures (Most Common Issue):**

@@ -23,8 +23,8 @@ def generate_mcp_config(mode: str, github_token: str, pr_number: str = None) -> 
     Returns:
         JSON string containing MCP configuration
     """
-    # Only enable MCP server for pr-update mode
-    if mode != "pr-update":
+    # Only enable MCP server for pr-update and pr-gen modes
+    if mode == "plan-gen":
         return '{"mcpServers": {}}'
     
     # Extract repository information from environment
@@ -118,8 +118,8 @@ def main() -> None:
     # Set GitHub Actions output
     set_github_output("mcp_config", mcp_config)
     
-    if mode == "pr-update" and mcp_config != "{}":
-        print("✅ MCP configuration prepared for pr-update mode")
+    if mode in ["pr-update", "pr-gen"] and mcp_config != '{"mcpServers": {}}':
+        print(f"✅ MCP configuration prepared for {mode} mode")
         print("🔧 GitHub file operations server enabled")
         print(f"🔧 [DEBUG] MCP config: {mcp_config}")
         
