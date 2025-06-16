@@ -204,6 +204,17 @@ runs:
           --allowed-tools "${{ inputs.allowed_tools }}" \
           --disallowed-tools "${{ inputs.disallowed_tools }}"
 
+    - name: Checkout appropriate branch
+      id: checkout_branch
+      shell: bash
+      env:
+        DEVSY_MODE: ${{ inputs.mode }}
+        DEVSY_PR_NUMBER: ${{ inputs.pr_number }}
+        GITHUB_TOKEN: ${{ steps.token_exchange.outputs.github_token }}
+        DEVSY_REPO: ${{ github.repository }}
+      run: |
+        /tmp/devsy-action-env/bin/python ${{ github.action_path }}/src/checkout_branch.py
+
     - name: Prepare MCP configuration
       id: prepare_mcp
       shell: bash
