@@ -78,6 +78,13 @@ You will analyze PR feedback, categorize and prioritize changes, implement updat
 ### REQUIRED Git Workflow - READ CAREFULLY
 **THIS IS THE MANDATORY WORKFLOW FOR ALL PR UPDATES:**
 
+⚠️ **CRITICAL PUSH REQUIREMENT**: You MUST use `mcp__github-file-ops__push_changes` for ALL push operations. This includes:
+- Regular pushes after simple commits
+- Force pushes after rebases or git history changes  
+- Pushes after resolving merge conflicts
+- Any scenario where you would normally use `git push`, `git push --force`, or `git push --force-with-lease`
+- **NO EXCEPTIONS** - even complex git operations must use the MCP push tool
+
 1. **EDIT FILES LOCALLY FIRST** using standard Claude Code tools (Edit, MultiEdit, etc.)
 2. **STAGE YOUR CHANGES**: Use `git add .` or `git add specific-files` via Bash tool
 3. **COMMIT LOCALLY**: Use `git commit -m "descriptive message"` via Bash tool
@@ -88,6 +95,8 @@ You will analyze PR feedback, categorize and prioritize changes, implement updat
    - Recreates your local commit (INCLUDING all pre-commit hook changes) on GitHub via API
    - **GUARANTEES** GitHub checks are properly triggered
    - Provides reliable branch updates even with authentication issues
+   - **HANDLES ALL SCENARIOS**: Works for regular pushes, force pushes, rebases, and complex git operations
+   - **NEVER USE `git push`**: ALWAYS use `push_changes` regardless of complexity
 
 ### CRITICAL: Pre-Commit Hook Handling
 **Pre-commit hooks require careful, persistent handling to ensure clean commits:**
@@ -217,6 +226,8 @@ You have access to GitHub MCP tools for committing local file changes via GitHub
 3. **PUSH VIA MCP TOOL**
    - **ONLY AFTER CLEAN LOCAL COMMIT**: Use `mcp__github-file-ops__push_changes`
    - **NEVER** use traditional `git push` commands
+   - **ALL SCENARIOS**: This includes regular pushes, force pushes, rebases, and any git operations
+   - **NO EXCEPTIONS**: Even if rebase required or conflicts resolved, still use `push_changes`
 
 ### Available MCP GitHub Tools
 
@@ -326,6 +337,16 @@ All requested changes have been implemented. The PR is ready for re-review.
 
 ### CRITICAL Error Handling - Must Follow
 
+**Rebase and Force Push Scenarios:**
+- **REBASE OPERATIONS**: If you perform git rebase (e.g., to resolve conflicts with main):
+  1. **COMPLETE REBASE LOCALLY**: Resolve all conflicts and finish rebase with `git rebase --continue`
+  2. **VERIFY CLEAN STATE**: Use `git status` to ensure working tree is clean
+  3. **STILL USE MCP PUSH**: Use `mcp__github-file-ops__push_changes` even though it's a force push scenario
+  4. **NEVER USE `git push --force`**: The MCP tool handles all push scenarios including force pushes
+- **COMPLEX GIT OPERATIONS**: For any complex git scenario (cherry-pick, squash, etc.):
+  1. **COMPLETE LOCALLY**: Finish all git operations locally first
+  2. **ALWAYS USE MCP**: Use `mcp__github-file-ops__push_changes` regardless of complexity
+
 **Pre-Commit Hook Failures (MOST COMMON):**
 - **COMMIT REJECTED**: If `git commit` fails due to hook changes:
   1. **DO NOT STOP** - this is expected behavior
@@ -339,6 +360,7 @@ All requested changes have been implemented. The PR is ready for re-review.
   1. **VERIFY CLEAN COMMIT**: Ensure `git status` shows "working tree clean"
   2. **CHECK COMMIT EXISTS**: Use `git log --oneline -1` to verify local commit
   3. **RETRY PUSH**: Attempt `mcp__github-file-ops__push_changes` again
+  4. **NEVER FALLBACK TO GIT PUSH**: Do not use `git push` even if MCP fails - report the issue instead
 
 **File Not Found Errors:**
 - **ALL TOOLS EXPECT LOCAL FILES** - Must exist in working directory
