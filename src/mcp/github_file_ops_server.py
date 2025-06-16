@@ -254,6 +254,13 @@ def push_changes_impl(
                 capture_output=True, text=True, check=True, cwd=os.getcwd()
             )
             
+            # Reset local branch to match the new commit SHA on GitHub
+            # This ensures local and remote are in sync so gh pr create works
+            subprocess.run(
+                ["git", "reset", "--hard", new_commit_sha],
+                capture_output=True, text=True, check=True, cwd=os.getcwd()
+            )
+            
             # Set up branch tracking so git knows this branch exists on remote
             subprocess.run(
                 ["git", "branch", f"--set-upstream-to=origin/{branch}", branch],
