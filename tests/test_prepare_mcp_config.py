@@ -37,8 +37,24 @@ class TestGenerateMcpConfig:
     
     def test_pr_gen_mode(self):
         """Test MCP config generation for pr-gen mode."""
-        config_json = generate_mcp_config("pr-gen", "token123")
-        assert config_json == '{"mcpServers": {}}'
+        with patch.dict(os.environ, {
+            "GITHUB_REPOSITORY": "DevsyAI/devsy-action",
+            "GITHUB_REF_NAME": "feat/mcp-tools-for-pr-gen",
+            "GITHUB_ACTION_PATH": "/tmp/devsy-action-env"
+        }, clear=True):
+            config_json = generate_mcp_config("pr-gen", "token123")
+            config = json.loads(config_json)
+            
+            assert "mcpServers" in config
+            assert "github-file-ops" in config["mcpServers"]
+            
+            server_config = config["mcpServers"]["github-file-ops"]
+            assert server_config["command"] == "/tmp/devsy-action-env/bin/python"
+            assert server_config["args"][0] == "/tmp/devsy-action-env/src/mcp/github_file_ops_server.py"
+            assert server_config["env"]["GITHUB_TOKEN"] == "token123"
+            assert server_config["env"]["REPO_OWNER"] == "DevsyAI"
+            assert server_config["env"]["REPO_NAME"] == "devsy-action"
+            assert server_config["env"]["BRANCH_NAME"] == "feat/mcp-tools-for-pr-gen"
     
     def test_plan_gen_mode(self):
         """Test MCP config generation for plan-gen mode."""
@@ -155,17 +171,24 @@ class TestMain:
         """Test successful execution for pr-gen mode."""
         with patch.dict(os.environ, {
             "DEVSY_MODE": "pr-gen",
-            "GITHUB_TOKEN": "token123"
+            "GITHUB_TOKEN": "token123",
+            "GITHUB_REPOSITORY": "DevsyAI/devsy-action",
+            "GITHUB_ACTION_PATH": "/tmp/devsy-action-env",
+            "GITHUB_REF_NAME": "feat/mcp-tools-for-pr-gen"
         }):
             with patch("prepare_mcp_config.set_github_output") as mock_output:
                 main()
                 
-                # Verify empty config was set
-                mock_output.assert_called_once_with("mcp_config", '{"mcpServers": {}}')
+                # Verify MCP config was set (should now include github-file-ops)
+                mock_output.assert_called_once()
+                args = mock_output.call_args[0]
+                assert args[0] == "mcp_config"
+                assert "github-file-ops" in args[1]
                 
                 # Check console output
                 captured = capsys.readouterr()
-                assert "ℹ️  MCP server not needed for this mode" in captured.out
+                assert "✅ MCP configuration prepared for pr-gen mode" in captured.out
+                assert "🔧 GitHub file operations server enabled" in captured.out
     
     def test_missing_mode(self, capsys):
         """Test error when DEVSY_MODE is missing."""
