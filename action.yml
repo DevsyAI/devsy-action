@@ -128,31 +128,6 @@ runs:
         source /tmp/devsy-action-env/bin/activate
         pip install -r "${{ github.action_path }}/requirements.txt"
 
-    - name: Configure Git identity
-      shell: bash
-      env:
-        GITHUB_TOKEN: ${{ steps.token_exchange.outputs.github_token }}
-      run: |
-        # Configure git identity based on the token source
-        if [ "${{ steps.token_exchange.outputs.token_source }}" = "devsy-bot" ]; then
-          # Get the bot's identity dynamically for verified commits
-          BOT_INFO=$(gh api user --jq '{login: .login, id: .id}')
-          BOT_LOGIN=$(echo "$BOT_INFO" | jq -r '.login')
-          BOT_ID=$(echo "$BOT_INFO" | jq -r '.id')
-          
-          git config --global user.email "${BOT_ID}+${BOT_LOGIN}@users.noreply.github.com"
-          git config --global user.name "$BOT_LOGIN"
-          echo "✅ Configured git identity for $BOT_LOGIN (ID: $BOT_ID)"
-        else
-          # Fallback to generic identity
-          git config --global user.email "no-reply@devsy.ai"
-          git config --global user.name "Devsy Bot"
-          echo "✅ Configured git identity for Devsy Bot (fallback)"
-        fi
-        # Configure Git to use HTTPS instead of SSH for GitHub repositories
-        # This enables pip to install private GitHub packages using the GitHub token
-        git config --global url."https://github.com/".insteadOf git@github.com:
-
     - name: Validate inputs
       shell: bash
       env:
@@ -209,6 +184,31 @@ runs:
           echo "github_token=${{ github.token }}" >> $GITHUB_OUTPUT
           echo "token_source=github-actions-bot" >> $GITHUB_OUTPUT
         fi
+
+    - name: Configure Git identity
+      shell: bash
+      env:
+        GITHUB_TOKEN: ${{ steps.token_exchange.outputs.github_token }}
+      run: |
+        # Configure git identity based on the token source
+        if [ "${{ steps.token_exchange.outputs.token_source }}" = "devsy-bot" ]; then
+          # Get the bot's identity dynamically for verified commits
+          BOT_INFO=$(gh api user --jq '{login: .login, id: .id}')
+          BOT_LOGIN=$(echo "$BOT_INFO" | jq -r '.login')
+          BOT_ID=$(echo "$BOT_INFO" | jq -r '.id')
+          
+          git config --global user.email "${BOT_ID}+${BOT_LOGIN}@users.noreply.github.com"
+          git config --global user.name "$BOT_LOGIN"
+          echo "✅ Configured git identity for $BOT_LOGIN (ID: $BOT_ID)"
+        else
+          # Fallback to generic identity
+          git config --global user.email "no-reply@devsy.ai"
+          git config --global user.name "Devsy Bot"
+          echo "✅ Configured git identity for Devsy Bot (fallback)"
+        fi
+        # Configure Git to use HTTPS instead of SSH for GitHub repositories
+        # This enables pip to install private GitHub packages using the GitHub token
+        git config --global url."https://github.com/".insteadOf git@github.com:
 
     - name: Prepare tool configuration
       id: prepare_tools
