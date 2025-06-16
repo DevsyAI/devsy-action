@@ -97,7 +97,8 @@ def push_changes_impl(
     owner: Optional[str] = None,
     repo: Optional[str] = None,
     branch: Optional[str] = None,
-    github_token: Optional[str] = None
+    github_token: Optional[str] = None,
+    mode: Optional[str] = None
 ) -> Dict[str, Any]:
     """
     Recreate a local commit on GitHub via API.
@@ -120,6 +121,7 @@ def push_changes_impl(
     owner = owner or os.environ.get('REPO_OWNER')
     repo = repo or os.environ.get('REPO_NAME')
     github_token = github_token or os.environ.get('GITHUB_TOKEN')
+    mode = mode or os.environ.get('DEVSY_MODE', 'pr-update')  # Default to pr-update for backward compatibility
     
     # Get current branch from git if not specified, rather than relying on env vars
     if not branch:
@@ -150,37 +152,34 @@ def push_changes_impl(
                 "error": "No files changed in the specified commit"
             }
         
-        # Get current remote state - handle new branches that don't exist yet
-        try:
+        # Get base SHA and determine if branch exists based on mode
+        if mode == "pr-gen":
+            # pr-gen: Always creating new branches, use main/master as base
+            branch_exists = False
+            try:
+                default_ref_data = make_github_request(
+                    "GET",
+                    f"{base_url}/git/refs/heads/main",
+                    github_token
+                )
+                base_sha = default_ref_data["object"]["sha"]
+            except Exception:
+                # If main doesn't exist, try master
+                default_ref_data = make_github_request(
+                    "GET",
+                    f"{base_url}/git/refs/heads/master",
+                    github_token
+                )
+                base_sha = default_ref_data["object"]["sha"]
+        else:
+            # pr-update: Branch should already exist
+            branch_exists = True
             ref_data = make_github_request(
                 "GET",
                 f"{base_url}/git/refs/heads/{branch}",
                 github_token
             )
             base_sha = ref_data["object"]["sha"]
-            branch_exists = True
-        except Exception as e:
-            if "404" in str(e):
-                # Branch doesn't exist yet - use default branch as base
-                try:
-                    default_ref_data = make_github_request(
-                        "GET",
-                        f"{base_url}/git/refs/heads/main",
-                        github_token
-                    )
-                    base_sha = default_ref_data["object"]["sha"]
-                    branch_exists = False
-                except Exception:
-                    # If main doesn't exist, try master
-                    default_ref_data = make_github_request(
-                        "GET",
-                        f"{base_url}/git/refs/heads/master",
-                        github_token
-                    )
-                    base_sha = default_ref_data["object"]["sha"]
-                    branch_exists = False
-            else:
-                raise e
         
         # Get base tree
         base_commit = make_github_request(
