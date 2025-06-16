@@ -54,6 +54,8 @@ def make_github_request(
 
 
 
+
+
 def commit_files_impl(
     message: str,
     files: List[str],
@@ -167,7 +169,7 @@ def commit_files_impl(
         )
         new_tree_sha = tree_data["sha"]
         
-        # Create the commit
+        # Create the commit (GitHub will infer committer from token)
         commit_data = make_github_request(
             "POST",
             f"{base_url}/git/commits",
@@ -287,7 +289,7 @@ def delete_files_impl(
         )
         new_tree_sha = tree_data["sha"]
         
-        # Create the commit
+        # Create the commit (GitHub will infer committer from token)
         commit_data = make_github_request(
             "POST",
             f"{base_url}/git/commits",
@@ -481,7 +483,7 @@ def push_changes_impl(
         )
         new_tree_sha = tree_data["sha"]
         
-        # Create commit with original message and author
+        # Create commit with original author (GitHub will infer committer from token)
         commit_data = make_github_request(
             "POST",
             f"{base_url}/git/commits",
