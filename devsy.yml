@@ -55,17 +55,6 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Run Devsy setup script
-        shell: bash
-        run: |
-          if [ -f ".devsy/setup.sh" ]; then
-            echo "Running .devsy/setup.sh..."
-            chmod +x .devsy/setup.sh
-            ./.devsy/setup.sh
-          else
-            echo "No .devsy/setup.sh found, skipping setup"
-          fi
-
       - name: Run Devsy Action
         id: devsy
         uses: DevsyAI/devsy-action@main
@@ -74,6 +63,11 @@ jobs:
           pr_number: ${{ inputs.pr_number }}
           prompt: ${{ inputs.prompt }}
           model: ${{ inputs.model }}
+          
+          # === Setup Script ===
+          # Uncomment if you have a setup script:
+          # setup_script: '.devsy/setup.sh'
+          
           # === Tool Configuration ===
           # Uncomment and modify these based on your project needs:
           allowed_tools: 'Bash(python:*)'

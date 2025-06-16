@@ -3,8 +3,13 @@
 # Devsy Setup Script Example
 # 
 # Copy this file to .devsy/setup.sh in your repository and uncomment the sections
-# relevant to your project. This script runs before Devsy executes to ensure
-# dependencies are installed.
+# relevant to your project. This script runs after Python environment setup
+# but before Claude Code execution to ensure dependencies are available.
+#
+# Usage in your workflow:
+#   - uses: DevsyAI/devsy-action@main
+#     with:
+#       setup_script: '.devsy/setup.sh'
 
 echo "🔧 Running Devsy setup..."
 

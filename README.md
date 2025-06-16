@@ -80,7 +80,18 @@ curl -o .devsy/setup.sh https://raw.githubusercontent.com/DevsyAI/devsy-action/m
 
 Then edit `.devsy/setup.sh` and uncomment the sections you need (Python, Node.js, etc.).
 
-This allows you to add more allowed_tools to use for things like running tests (e.g. Bash(python:*))
+Finally, configure your workflow to use the setup script:
+
+```yaml
+- uses: DevsyAI/devsy-action@main
+  with:
+    mode: pr-gen
+    prompt: "Add new feature"
+    setup_script: '.devsy/setup.sh'  # Add this line
+    allowed_tools: 'Bash(python:*),Bash(npm:*)'  # Enable tools for your stack
+```
+
+This ensures dependencies are installed in the correct Python environment before Claude Code execution.
 
 ### Alternative Authentication
 
@@ -118,6 +129,7 @@ Instead of Anthropic API key, you can use:
 - `callback_url`: URL to POST completion status and results
 - `callback_auth_token`: Bearer token for callback authentication
 - `callback_auth_header`: Custom auth header name (default: `Authorization`)
+- `setup_script`: Path to setup script to run before Claude Code execution
 - `max_turns`: Maximum number of conversation turns for Claude (default: `200`)
 - `timeout_minutes`: Timeout in minutes for Claude Code execution (default: `10`)
 
@@ -269,10 +281,18 @@ This can happen when:
 ### Setup/Dependency Issues
 
 If setup fails:
-- Ensure `.devsy/setup.sh` exists and is executable (`chmod +x .devsy/setup.sh`)
+- Ensure your setup script path is correct in the `setup_script` input
+- Verify the setup script exists and is executable (`chmod +x .devsy/setup.sh`)
 - Check that your setup script includes proper error handling (`set -e`)
-- Verify that required tools (npm, pip, etc.) are available in the GitHub Actions environment
+- The setup script runs after Python environment setup but before Claude Code execution
 - Test your setup script locally before committing
+
+### "No module named" Errors
+
+If Claude can't find installed packages:
+- Use the `setup_script` input instead of running setup in workflow steps
+- Always use `python -m pytest` instead of just `pytest` in your instructions
+- Ensure dependencies are installed via the setup script, not in earlier workflow steps
 
 ## License
 
