@@ -9,7 +9,7 @@ import base64
 import sys
 import os
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'src', 'mcp'))
-from github_file_ops_server import make_github_request, push_changes_impl, extract_local_commit_info
+from github_file_ops_server import make_github_request, push_changes_impl, extract_local_commit_info, add_comment_impl
 
 
 class TestMakeGithubRequest:
@@ -307,3 +307,201 @@ class TestPushChanges:
         assert "Missing required parameters" in result["error"]
 
 
+class TestAddComment:
+    """Test the add_comment_impl function."""
+    
+    @patch('github_file_ops_server.make_github_request')
+    def test_add_comment_success(self, mock_github_request):
+        """Test successful PR comment addition."""
+        # Mock the GitHub API response
+        mock_github_request.return_value = {
+            "id": 123456789,
+            "html_url": "https://github.com/owner/repo/pull/550#issuecomment-123456789",
+            "body": "## Test Comment\n\nThis is a test comment with `code` formatting."
+        }
+        
+        result = add_comment_impl(
+            pr_number=550,
+            body="## Test Comment\n\nThis is a test comment with `code` formatting.",
+            owner="testowner",
+            repo="testrepo",
+            github_token="token123"
+        )
+        
+        assert result["success"] is True
+        assert result["comment_id"] == 123456789
+        assert result["url"] == "https://github.com/owner/repo/pull/550#issuecomment-123456789"
+        assert result["body"] == "## Test Comment\n\nThis is a test comment with `code` formatting."
+        assert "Successfully added comment to PR #550" in result["message"]
+        
+        # Verify the GitHub API was called correctly
+        mock_github_request.assert_called_once_with(
+            "POST",
+            "https://api.github.com/repos/testowner/testrepo/issues/550/comments",
+            "token123",
+            {"body": "## Test Comment\n\nThis is a test comment with `code` formatting."}
+        )
+    
+    @patch('github_file_ops_server.make_github_request')
+    def test_add_comment_with_markdown(self, mock_github_request):
+        """Test adding comment with complex markdown formatting."""
+        markdown_body = """## ✅ Review Feedback Addressed
+
+**Changes Made:**
+
+### 1. Fixed Function Usage
+- Issue: Replaced `warnings.warn()` with `print()` statement
+- Location: `core/utils/logger.py:42`
+- Rationale: Simpler approach without importing warnings module
+
+### 2. Code Examples
+```python
+def example_function():
+    return "Hello World"
+```
+
+**Key Points:**
+- Repository context flows correctly
+- Both workflows receive same `repository` object
+- Testing confirmed for GitHub Actions workflow
+
+All requested changes implemented."""
+        
+        mock_github_request.return_value = {
+            "id": 987654321,
+            "html_url": "https://github.com/owner/repo/pull/123#issuecomment-987654321",
+            "body": markdown_body
+        }
+        
+        result = add_comment_impl(
+            pr_number=123,
+            body=markdown_body,
+            owner="testowner",
+            repo="testrepo", 
+            github_token="token123"
+        )
+        
+        assert result["success"] is True
+        assert result["comment_id"] == 987654321
+        assert "Successfully added comment to PR #123" in result["message"]
+        
+        # Verify the complex markdown was passed through correctly
+        call_args = mock_github_request.call_args
+        assert call_args[0][3]["body"] == markdown_body
+    
+    def test_add_comment_missing_parameters(self):
+        """Test error when required parameters are missing."""
+        result = add_comment_impl(
+            pr_number=123,
+            body="Test comment"
+            # Missing owner, repo, github_token
+        )
+        
+        assert result["success"] is False
+        assert "Missing required parameters: owner, repo, or github_token" in result["error"]
+    
+    def test_add_comment_empty_body(self):
+        """Test error when comment body is empty."""
+        result = add_comment_impl(
+            pr_number=123,
+            body="",
+            owner="testowner",
+            repo="testrepo",
+            github_token="token123"
+        )
+        
+        assert result["success"] is False
+        assert "Comment body cannot be empty" in result["error"]
+    
+    def test_add_comment_whitespace_only_body(self):
+        """Test error when comment body is only whitespace."""
+        result = add_comment_impl(
+            pr_number=123,
+            body="   \n\t  ",
+            owner="testowner",
+            repo="testrepo",
+            github_token="token123"
+        )
+        
+        assert result["success"] is False
+        assert "Comment body cannot be empty" in result["error"]
+    
+    @patch('github_file_ops_server.make_github_request')
+    def test_add_comment_api_failure(self, mock_github_request):
+        """Test handling of GitHub API failure."""
+        mock_github_request.side_effect = Exception("GitHub API error: 404 Not found")
+        
+        result = add_comment_impl(
+            pr_number=999,
+            body="Test comment",
+            owner="testowner",
+            repo="testrepo",
+            github_token="token123"
+        )
+        
+        assert result["success"] is False
+        assert "GitHub API error: 404 Not found" in result["error"]
+    
+    @patch('github_file_ops_server.make_github_request')
+    def test_add_comment_with_env_vars(self, mock_github_request):
+        """Test using environment variables for repo context."""
+        with patch.dict('os.environ', {
+            'REPO_OWNER': 'env-owner',
+            'REPO_NAME': 'env-repo',
+            'GITHUB_TOKEN': 'env-token'
+        }):
+            mock_github_request.return_value = {
+                "id": 555,
+                "html_url": "https://github.com/env-owner/env-repo/pull/42#issuecomment-555",
+                "body": "Environment test"
+            }
+            
+            result = add_comment_impl(
+                pr_number=42,
+                body="Environment test"
+                # No explicit owner, repo, github_token - should use env vars
+            )
+            
+            assert result["success"] is True
+            assert result["comment_id"] == 555
+            
+            # Verify it used the environment variables
+            mock_github_request.assert_called_once_with(
+                "POST",
+                "https://api.github.com/repos/env-owner/env-repo/issues/42/comments",
+                "env-token",
+                {"body": "Environment test"}
+            )
+    
+    @patch('github_file_ops_server.make_github_request')
+    def test_add_comment_explicit_params_override_env(self, mock_github_request):
+        """Test that explicit parameters override environment variables."""
+        with patch.dict('os.environ', {
+            'REPO_OWNER': 'env-owner',
+            'REPO_NAME': 'env-repo', 
+            'GITHUB_TOKEN': 'env-token'
+        }):
+            mock_github_request.return_value = {
+                "id": 777,
+                "html_url": "https://github.com/explicit-owner/explicit-repo/pull/99#issuecomment-777",
+                "body": "Override test"
+            }
+            
+            result = add_comment_impl(
+                pr_number=99,
+                body="Override test",
+                owner="explicit-owner",  # Should override env var
+                repo="explicit-repo",    # Should override env var
+                github_token="explicit-token"  # Should override env var
+            )
+            
+            assert result["success"] is True
+            assert result["comment_id"] == 777
+            
+            # Verify it used the explicit parameters, not env vars
+            mock_github_request.assert_called_once_with(
+                "POST",
+                "https://api.github.com/repos/explicit-owner/explicit-repo/issues/99/comments",
+                "explicit-token",
+                {"body": "Override test"}
+            )

@@ -92,6 +92,69 @@ def extract_local_commit_info(commit_ref: str = "HEAD") -> Dict[str, Any]:
         raise Exception(f"Failed to extract commit info: {e.stderr}")
 
 
+def add_comment_impl(
+    pr_number: int,
+    body: str,
+    owner: Optional[str] = None,
+    repo: Optional[str] = None,
+    github_token: Optional[str] = None
+) -> Dict[str, Any]:
+    """
+    Add a comment to a GitHub pull request.
+    
+    Args:
+        pr_number: Pull request number
+        body: Comment body (markdown supported)
+        owner: Repository owner (optional, defaults to env var)
+        repo: Repository name (optional, defaults to env var)
+        github_token: GitHub authentication token (optional, defaults to env var)
+    
+    Returns:
+        Dictionary with comment details including ID and URL
+    """
+    # Use environment variables as defaults
+    owner = owner or os.environ.get('REPO_OWNER')
+    repo = repo or os.environ.get('REPO_NAME')
+    github_token = github_token or os.environ.get('GITHUB_TOKEN')
+    
+    if not all([owner, repo, github_token]):
+        return {
+            "success": False,
+            "error": "Missing required parameters: owner, repo, or github_token"
+        }
+    
+    if not body.strip():
+        return {
+            "success": False,
+            "error": "Comment body cannot be empty"
+        }
+    
+    base_url = f"https://api.github.com/repos/{owner}/{repo}"
+    
+    try:
+        # Add comment to PR
+        comment_data = make_github_request(
+            "POST",
+            f"{base_url}/issues/{pr_number}/comments",
+            github_token,
+            {"body": body}
+        )
+        
+        return {
+            "success": True,
+            "comment_id": comment_data["id"],
+            "url": comment_data["html_url"],
+            "body": comment_data["body"],
+            "message": f"Successfully added comment to PR #{pr_number}"
+        }
+        
+    except Exception as e:
+        return {
+            "success": False,
+            "error": str(e)
+        }
+
+
 def push_changes_impl(
     commit_ref: str = "HEAD",
     owner: Optional[str] = None,
@@ -278,6 +341,36 @@ async def handle_list_tools() -> list[types.Tool]:
     """List available tools."""
     return [
         types.Tool(
+            name="add_comment",
+            description="Add a comment to a GitHub pull request",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "pr_number": {
+                        "type": "integer",
+                        "description": "Pull request number"
+                    },
+                    "body": {
+                        "type": "string",
+                        "description": "Comment body (markdown supported)"
+                    },
+                    "owner": {
+                        "type": "string",
+                        "description": "Repository owner (optional, defaults to env var)"
+                    },
+                    "repo": {
+                        "type": "string",
+                        "description": "Repository name (optional, defaults to env var)"
+                    },
+                    "github_token": {
+                        "type": "string",
+                        "description": "GitHub token (optional, defaults to env var)"
+                    }
+                },
+                "required": ["pr_number", "body"]
+            }
+        ),
+        types.Tool(
             name="push_changes",
             description="Recreate a local git commit on GitHub via API (includes pre-commit hook changes)",
             inputSchema={
@@ -313,7 +406,9 @@ async def handle_list_tools() -> list[types.Tool]:
 async def handle_call_tool(name: str, arguments: dict) -> list[types.TextContent]:
     """Handle tool calls."""
     try:
-        if name == "push_changes":
+        if name == "add_comment":
+            result = add_comment_impl(**arguments)
+        elif name == "push_changes":
             result = push_changes_impl(**arguments)
         else:
             result = {"success": False, "error": f"Unknown tool: {name}"}
