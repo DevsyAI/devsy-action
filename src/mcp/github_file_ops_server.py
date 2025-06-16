@@ -246,6 +246,24 @@ def push_changes_impl(
         except subprocess.CalledProcessError:
             original_sha = "unknown"
         
+        # Update local git refs to match remote state so `gh pr create` works
+        try:
+            # Update the remote tracking branch reference
+            subprocess.run(
+                ["git", "update-ref", f"refs/remotes/origin/{branch}", new_commit_sha],
+                capture_output=True, text=True, check=True, cwd=os.getcwd()
+            )
+            
+            # Set up branch tracking so git knows this branch exists on remote
+            subprocess.run(
+                ["git", "branch", f"--set-upstream-to=origin/{branch}", branch],
+                capture_output=True, text=True, check=False, cwd=os.getcwd()  # Don't fail if already set
+            )
+            
+        except subprocess.CalledProcessError as e:
+            # Don't fail the whole operation if git ref update fails
+            print(f"⚠️ Warning: Failed to update local git refs: {e.stderr}", file=sys.stderr)
+        
         return {
             "success": True,
             "original_local_sha": original_sha,
