@@ -34,6 +34,8 @@ class TestGenerateMcpConfig:
             assert server_config["env"]["REPO_OWNER"] == "owner"
             assert server_config["env"]["REPO_NAME"] == "repo"
             assert server_config["env"]["BRANCH_NAME"] == "feature-branch"
+            assert server_config["env"]["DEVSY_MODE"] == "pr-update"
+            assert server_config["env"]["DEVSY_BASE_BRANCH"] == "main"  # default
     
     def test_pr_gen_mode(self):
         """Test MCP config generation for pr-gen mode."""
@@ -55,6 +57,28 @@ class TestGenerateMcpConfig:
             assert server_config["env"]["REPO_OWNER"] == "DevsyAI"
             assert server_config["env"]["REPO_NAME"] == "devsy-action"
             assert server_config["env"]["BRANCH_NAME"] == "feat/mcp-tools-for-pr-gen"
+            assert server_config["env"]["DEVSY_MODE"] == "pr-gen"
+            assert server_config["env"]["DEVSY_BASE_BRANCH"] == "main"  # default
+    
+    def test_pr_gen_mode_with_custom_base_branch(self):
+        """Test MCP config generation for pr-gen mode with custom base branch."""
+        with patch.dict(os.environ, {
+            "GITHUB_REPOSITORY": "owner/repo",
+            "GITHUB_REF_NAME": "feat/new-feature",
+            "GITHUB_ACTION_PATH": "/path/to/action",
+            "DEVSY_BASE_BRANCH": "development"
+        }, clear=True):
+            config_json = generate_mcp_config("pr-gen", "token123")
+            config = json.loads(config_json)
+            
+            assert "mcpServers" in config
+            assert "github-file-ops" in config["mcpServers"]
+            
+            server_config = config["mcpServers"]["github-file-ops"]
+            assert server_config["env"]["DEVSY_MODE"] == "pr-gen"
+            assert server_config["env"]["DEVSY_BASE_BRANCH"] == "development"
+            assert server_config["env"]["REPO_OWNER"] == "owner"
+            assert server_config["env"]["REPO_NAME"] == "repo"
     
     def test_plan_gen_mode(self):
         """Test MCP config generation for plan-gen mode."""

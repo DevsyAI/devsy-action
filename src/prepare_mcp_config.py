@@ -72,6 +72,8 @@ def generate_mcp_config(mode: str, github_token: str, pr_number: str = None) -> 
                     "REPO_OWNER": owner,
                     "REPO_NAME": repo_name,
                     "BRANCH_NAME": branch,
+                    "DEVSY_MODE": mode,
+                    "DEVSY_BASE_BRANCH": os.environ.get("DEVSY_BASE_BRANCH", "main"),
                     "PYTHONPATH": os.environ.get("GITHUB_ACTION_PATH", "")
                 }
             }
