@@ -169,9 +169,9 @@ You have access to GitHub MCP tools for complete workflow automation. After impl
    - **Verify no uncommitted changes**: Run `git status` to confirm working directory is clean
    - **NEVER leave uncommitted changes** - they won't be included in the PR
 
-3. **Push and PR Creation**: Use MCP push tool followed by GitHub CLI
+3. **Push and PR Creation**: Use MCP tools for both push and PR creation
    - Push your local branch via MCP: `mcp__github-file-ops__push_changes()`
-   - Create PR via GitHub CLI: `gh pr create --title "..." --body "..."`
+   - Create PR via MCP: `mcp__github-file-ops__create_pull_request()`
    - Generate a clear, descriptive title summarizing the feature/fix
    - Write a detailed description explaining:
      - What was implemented and why
@@ -206,10 +206,18 @@ You have access to GitHub MCP tools for complete workflow automation. After impl
   - Ensures all pre-commit hook changes are included
   - Automatically triggers GitHub checks
 
-### GitHub CLI for PR Creation
-- Use `gh pr create` to create pull requests after pushing
-- Example: `gh pr create --title "feat: add new feature" --body "Description..."`
-- The CLI will automatically use the pushed branch
+- **`mcp__github-file-ops__create_pull_request`** - Create pull request via GitHub API (REQUIRED for PR creation)
+  - **Usage**: After pushing branch, use `mcp__github-file-ops__create_pull_request(title="...", body="...", head_branch="...")`
+  - More reliable than `gh pr create` command
+  - Requires: `title` (string), `head_branch` (string)
+  - Optional: `body` (string), `base_branch` (string, defaults to "main")
+  - Automatically uses environment variables for owner, repo, and token
+  - Returns PR number and URL for confirmation
+
+### DEPRECATED: GitHub CLI for PR Creation
+- **DO NOT USE**: `gh pr create` - Use MCP tool instead
+- The `gh pr create` command has been replaced with the more reliable `mcp__github-file-ops__create_pull_request` tool
+- **REQUIRED**: Always use the MCP tool for creating pull requests
 
 ### Critical Error Handling
 **Commit Failures (Most Common Issue):**

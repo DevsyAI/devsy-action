@@ -92,6 +92,125 @@ def extract_local_commit_info(commit_ref: str = "HEAD") -> Dict[str, Any]:
         raise Exception(f"Failed to extract commit info: {e.stderr}")
 
 
+def create_pull_request_impl(
+    title: str,
+    body: str,
+    head_branch: str,
+    base_branch: str = "main",
+    owner: Optional[str] = None,
+    repo: Optional[str] = None,
+    github_token: Optional[str] = None
+) -> Dict[str, Any]:
+    """
+    Create a pull request via GitHub API.
+    
+    This tool creates a pull request using the GitHub API directly, providing
+    a more reliable alternative to the gh CLI tool.
+    
+    Args:
+        title: Pull request title
+        body: Pull request description/body
+        head_branch: The branch containing the changes
+        base_branch: The branch to merge into (default: main)
+        owner: Repository owner (optional, defaults to env var)
+        repo: Repository name (optional, defaults to env var)
+        github_token: GitHub authentication token (optional, defaults to env var)
+    
+    Returns:
+        Dictionary with pull request details including number and URL
+    """
+    
+    # Use environment variables as defaults
+    owner = owner or os.environ.get('REPO_OWNER')
+    repo = repo or os.environ.get('REPO_NAME')
+    github_token = github_token or os.environ.get('GITHUB_TOKEN')
+    
+    if not all([owner, repo, github_token]):
+        return {
+            "success": False,
+            "error": "Missing required parameters: owner, repo, or github_token"
+        }
+    
+    if not all([title, head_branch]):
+        return {
+            "success": False,
+            "error": "Missing required parameters: title and head_branch"
+        }
+    
+    base_url = f"https://api.github.com/repos/{owner}/{repo}"
+    
+    try:
+        # Check if head branch exists
+        try:
+            make_github_request(
+                "GET",
+                f"{base_url}/git/refs/heads/{head_branch}",
+                github_token
+            )
+        except Exception:
+            return {
+                "success": False,
+                "error": f"Head branch '{head_branch}' does not exist"
+            }
+        
+        # Check if base branch exists
+        try:
+            make_github_request(
+                "GET",
+                f"{base_url}/git/refs/heads/{base_branch}",
+                github_token
+            )
+        except Exception:
+            return {
+                "success": False,
+                "error": f"Base branch '{base_branch}' does not exist"
+            }
+        
+        # Create the pull request
+        pr_data = {
+            "title": title,
+            "body": body,
+            "head": head_branch,
+            "base": base_branch,
+            "maintainer_can_modify": True
+        }
+        
+        pr_response = make_github_request(
+            "POST",
+            f"{base_url}/pulls",
+            github_token,
+            pr_data
+        )
+        
+        return {
+            "success": True,
+            "pr_number": pr_response["number"],
+            "pr_url": pr_response["html_url"],
+            "pr_id": pr_response["id"],
+            "message": f"Successfully created PR #{pr_response['number']}: {title}"
+        }
+        
+    except Exception as e:
+        error_msg = str(e)
+        
+        # Handle common errors with more helpful messages
+        if "already exists" in error_msg.lower():
+            return {
+                "success": False,
+                "error": f"A pull request from '{head_branch}' to '{base_branch}' already exists"
+            }
+        elif "422" in error_msg and "no commits" in error_msg.lower():
+            return {
+                "success": False,
+                "error": f"No commits between '{base_branch}' and '{head_branch}' - nothing to create PR for"
+            }
+        else:
+            return {
+                "success": False,
+                "error": f"Failed to create pull request: {error_msg}"
+            }
+
+
 def push_changes_impl(
     commit_ref: str = "HEAD",
     owner: Optional[str] = None,
@@ -305,6 +424,44 @@ async def handle_list_tools() -> list[types.Tool]:
                     }
                 }
             }
+        ),
+        types.Tool(
+            name="create_pull_request",
+            description="Create a pull request via GitHub API (more reliable than gh CLI)",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "title": {
+                        "type": "string",
+                        "description": "Pull request title"
+                    },
+                    "body": {
+                        "type": "string",
+                        "description": "Pull request description/body"
+                    },
+                    "head_branch": {
+                        "type": "string",
+                        "description": "The branch containing the changes"
+                    },
+                    "base_branch": {
+                        "type": "string",
+                        "description": "The branch to merge into (default: main)"
+                    },
+                    "owner": {
+                        "type": "string",
+                        "description": "Repository owner (optional, defaults to env var)"
+                    },
+                    "repo": {
+                        "type": "string",
+                        "description": "Repository name (optional, defaults to env var)"
+                    },
+                    "github_token": {
+                        "type": "string",
+                        "description": "GitHub token (optional, defaults to env var)"
+                    }
+                },
+                "required": ["title", "head_branch"]
+            }
         )
     ]
 
@@ -315,6 +472,8 @@ async def handle_call_tool(name: str, arguments: dict) -> list[types.TextContent
     try:
         if name == "push_changes":
             result = push_changes_impl(**arguments)
+        elif name == "create_pull_request":
+            result = create_pull_request_impl(**arguments)
         else:
             result = {"success": False, "error": f"Unknown tool: {name}"}
         
