@@ -150,13 +150,37 @@ def push_changes_impl(
                 "error": "No files changed in the specified commit"
             }
         
-        # Get current remote state
-        ref_data = make_github_request(
-            "GET",
-            f"{base_url}/git/refs/heads/{branch}",
-            github_token
-        )
-        base_sha = ref_data["object"]["sha"]
+        # Get current remote state - handle new branches that don't exist yet
+        try:
+            ref_data = make_github_request(
+                "GET",
+                f"{base_url}/git/refs/heads/{branch}",
+                github_token
+            )
+            base_sha = ref_data["object"]["sha"]
+            branch_exists = True
+        except Exception as e:
+            if "404" in str(e):
+                # Branch doesn't exist yet - use default branch as base
+                try:
+                    default_ref_data = make_github_request(
+                        "GET",
+                        f"{base_url}/git/refs/heads/main",
+                        github_token
+                    )
+                    base_sha = default_ref_data["object"]["sha"]
+                    branch_exists = False
+                except Exception:
+                    # If main doesn't exist, try master
+                    default_ref_data = make_github_request(
+                        "GET",
+                        f"{base_url}/git/refs/heads/master",
+                        github_token
+                    )
+                    base_sha = default_ref_data["object"]["sha"]
+                    branch_exists = False
+            else:
+                raise e
         
         # Get base tree
         base_commit = make_github_request(
@@ -236,16 +260,29 @@ def push_changes_impl(
         )
         new_commit_sha = commit_data["sha"]
         
-        # Update branch reference
-        ref_update = make_github_request(
-            "PATCH",
-            f"{base_url}/git/refs/heads/{branch}",
-            github_token,
-            {
-                "sha": new_commit_sha,
-                "force": False
-            }
-        )
+        # Update or create branch reference
+        if branch_exists:
+            # Update existing branch
+            ref_update = make_github_request(
+                "PATCH",
+                f"{base_url}/git/refs/heads/{branch}",
+                github_token,
+                {
+                    "sha": new_commit_sha,
+                    "force": False
+                }
+            )
+        else:
+            # Create new branch
+            ref_update = make_github_request(
+                "POST",
+                f"{base_url}/git/refs",
+                github_token,
+                {
+                    "ref": f"refs/heads/{branch}",
+                    "sha": new_commit_sha
+                }
+            )
         
         # Get original local commit SHA for reference
         try:
