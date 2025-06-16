@@ -218,18 +218,13 @@ You have access to GitHub MCP tools for committing local file changes via GitHub
    - **ONLY AFTER CLEAN LOCAL COMMIT**: Use `mcp__github-file-ops__push_changes`
    - **NEVER** use traditional `git push` commands
 
-### Available MCP Commit Tools
+### Available MCP GitHub Tools
 
-#### Primary Tools (Recommended)
-- **`mcp__github-file-ops__commit_files`**: Commit local files to GitHub repository
-  - **Usage**: `mcp__github-file-ops__commit_files(message="Fix review feedback", files=["src/file.py", "tests/test_file.py"])`
-  - Reads file content from local filesystem and commits to remote
-  - Use after editing files locally with Edit/Write tools
-
-- **`mcp__github-file-ops__delete_files`**: Delete files from GitHub repository
-  - **Usage**: `mcp__github-file-ops__delete_files(message="Remove deprecated files", files=["old_file.py", "deprecated.js"])`
-  - Deletes specified files from the remote repository
-  - Use when files need to be removed entirely
+- **`mcp__github-file-ops__push_changes`**: Recreate local git commit on GitHub via API
+  - **Usage**: `mcp__github-file-ops__push_changes()`
+  - Reads your local commit (including all pre-commit hook changes) and recreates it on GitHub
+  - Use after making a clean local commit with git add/commit
+  - Ensures GitHub checks are properly triggered
 
 
 ### MANDATORY Workflow Example - Follow Exactly
@@ -245,18 +240,14 @@ You have access to GitHub MCP tools for committing local file changes via GitHub
 6. PUSH TO GITHUB: mcp__github-file-ops__push_changes
 ```
 
-**ALTERNATIVE DIRECT APPROACH (When Local Git Not Suitable):**
+**FILE DELETION WORKFLOW:**
 ```
 1. EDIT FILES: Edit("src/component.py", old_string="...", new_string="...")
-2. EDIT TESTS: Edit("tests/test_component.py", old_string="...", new_string="...")
-3. COMMIT VIA MCP: mcp__github-file-ops__commit_files(
-     message="fix: address review feedback on error handling",
-     files=["src/component.py", "tests/test_component.py"]
-   )
-4. DELETE FILES: mcp__github-file-ops__delete_files(
-     message="remove deprecated utility",
-     files=["src/old_utility.py"]
-   )
+2. DELETE FILES: git rm old_file.py (via Bash tool) 
+3. STAGE CHANGES: git add . (via Bash tool)
+4. COMMIT LOCALLY: git commit -m "fix: remove deprecated file and update component" (via Bash tool)
+5. VERIFY CLEAN: git status (via Bash tool) - should show "working tree clean"
+6. PUSH TO GITHUB: mcp__github-file-ops__push_changes
 ```
 
 ### CRITICAL Guidelines - No Exceptions
@@ -327,8 +318,8 @@ All requested changes have been implemented. The PR is ready for re-review.
 
 ### Complete Update Strategy
 1. **Code Changes**: Edit files locally using standard Claude Code tools
-2. **Commit Changes**: Use MCP tools to commit local changes to remote repository
-3. **Delete Files**: Use MCP delete_files tool for file removals
+2. **Commit Changes**: Use git add/commit locally, then push via MCP push_changes tool
+3. **Delete Files**: Use git rm via Bash tool, then commit and push via MCP push_changes
 4. **Summary Comment**: **EXECUTE** `gh pr comment` to add comprehensive summary
 5. **Metadata Review**: **EXECUTE** `gh pr edit` if updates are warranted
 6. **Final Verification**: Ensure all feedback addressed and PR is ready for re-review
@@ -348,10 +339,6 @@ All requested changes have been implemented. The PR is ready for re-review.
   1. **VERIFY CLEAN COMMIT**: Ensure `git status` shows "working tree clean"
   2. **CHECK COMMIT EXISTS**: Use `git log --oneline -1` to verify local commit
   3. **RETRY PUSH**: Attempt `mcp__github-file-ops__push_changes` again
-- If `mcp__github-file-ops__commit_files` fails:
-  1. **VERIFY LOCAL FILES**: Use `LS` tool to confirm files exist locally
-  2. **CHECK FILE PATHS**: Ensure paths are correct and accessible
-  3. **RETRY WITH CORRECT PATHS**: Use exact file paths from your edits
 
 **File Not Found Errors:**
 - **ALL TOOLS EXPECT LOCAL FILES** - Must exist in working directory
