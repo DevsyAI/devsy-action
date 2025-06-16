@@ -154,23 +154,15 @@ def push_changes_impl(
         
         # Get base SHA and determine if branch exists based on mode
         if mode == "pr-gen":
-            # pr-gen: Always creating new branches, use main/master as base
+            # pr-gen: Always creating new branches, use base branch as base
             branch_exists = False
-            try:
-                default_ref_data = make_github_request(
-                    "GET",
-                    f"{base_url}/git/refs/heads/main",
-                    github_token
-                )
-                base_sha = default_ref_data["object"]["sha"]
-            except Exception:
-                # If main doesn't exist, try master
-                default_ref_data = make_github_request(
-                    "GET",
-                    f"{base_url}/git/refs/heads/master",
-                    github_token
-                )
-                base_sha = default_ref_data["object"]["sha"]
+            base_branch = os.environ.get("DEVSY_BASE_BRANCH", "main")
+            base_ref_data = make_github_request(
+                "GET",
+                f"{base_url}/git/refs/heads/{base_branch}",
+                github_token
+            )
+            base_sha = base_ref_data["object"]["sha"]
         else:
             # pr-update: Branch should already exist
             branch_exists = True
