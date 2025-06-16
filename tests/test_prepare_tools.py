@@ -50,11 +50,18 @@ class TestGetBaseTools:
         assert "mcp__github-file-ops__commit_files" not in result
         assert "mcp__github-file-ops__delete_files" not in result
     
+    def test_get_base_tools_pr_gen_mode_includes_mcp_tools(self):
+        """Test that pr-gen mode includes MCP GitHub file operations tools."""
+        result = get_base_tools("pr-gen")
+        assert "mcp__github-file-ops__push_changes" in result
+        assert "mcp__github-file-ops__create_pull_request" in result
+    
     def test_get_base_tools_other_modes_exclude_mcp_tools(self):
         """Test that other modes do not include MCP GitHub file operations tools."""
-        for mode in ["pr-gen", "plan-gen", None]:
+        for mode in ["plan-gen", None]:
             result = get_base_tools(mode)
             assert "mcp__github-file-ops__push_changes" not in result
+            assert "mcp__github-file-ops__create_pull_request" not in result
 
 
 class TestGetDefaultDisallowedTools:
