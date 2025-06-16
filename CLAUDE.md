@@ -55,6 +55,16 @@ devsy-action/
 2. **`pr-update`**: Update existing PRs based on review feedback  
 3. **`plan-gen`**: Create implementation plans without code changes
 
+### Branch Management
+The action automatically handles branch checkout based on the mode:
+
+- **`pr-gen` mode**: Works on the default branch initially, Claude creates new feature branches as needed
+- **`pr-update` mode**: Automatically checks out the PR's head branch before running Claude
+  - Supports both same-repo and fork PRs
+  - For fork PRs, adds the fork as a remote and fetches the branch
+  - Ensures changes are committed to the correct branch instead of main
+- **`plan-gen` mode**: No branch changes needed (read-only analysis)
+
 ### Authentication
 - Primary: Attempts to exchange GitHub Actions token for devsy-bot access token
 - Fallback: Uses standard GitHub Actions bot token if devsy-bot unavailable
@@ -134,12 +144,13 @@ Currently no automated linting is configured. Follow PEP 8 conventions manually.
 ### Execution Flow
 1. **Input Validation** (`validate_inputs.py`): Validates required inputs based on mode
 2. **Token Exchange** (`github_token_exchange.py`): Attempts to get devsy-bot token
-3. **Prompt Preparation** (`prepare_prompt.py`): Loads templates, fetches GitHub data, renders prompts
-4. **Tool Configuration** (`prepare_tools.py`): Merges base tools with user-specified tools
+3. **Tool Configuration** (`prepare_tools.py`): Merges base tools with user-specified tools
+4. **Branch Checkout** (`checkout_branch.py`): Ensures correct branch is checked out for the mode
 5. **MCP Configuration** (`prepare_mcp_config.py`): Generates MCP server config for GitHub file operations
-6. **Claude Code Execution**: Uses anthropics/claude-code-base-action with MCP GitHub server
-7. **Output Extraction** (`extract_outputs.py`): Parses Claude's JSON output for PR info
-8. **Callback Notification** (`send_callback.py`): Sends webhook if callback_url provided
+6. **Prompt Preparation** (`prepare_prompt.py`): Loads templates, fetches GitHub data, renders prompts
+7. **Claude Code Execution**: Uses anthropics/claude-code-base-action with MCP GitHub server
+8. **Output Extraction** (`extract_outputs.py`): Parses Claude's JSON output for PR info
+9. **Callback Notification** (`send_callback.py`): Sends webhook if callback_url provided
 
 ### Key Design Decisions
 - **Modular Python Scripts**: Each script has a single responsibility and can be tested independently
@@ -237,6 +248,12 @@ For end-to-end testing:
    - Verify callback_url is accessible
    - Check auth token/header configuration
    - Review callback payload in logs
+
+5. **Branch Checkout Issues (pr-update mode)**
+   - Check that the PR exists and is accessible
+   - Verify GitHub token has sufficient permissions
+   - For fork PRs, ensure the fork repository is public or accessible
+   - Check git configuration and repository state
 
 ### Debug Mode
 To debug issues:
