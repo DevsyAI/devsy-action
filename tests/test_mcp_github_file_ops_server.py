@@ -9,7 +9,7 @@ import base64
 import sys
 import os
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'src', 'mcp'))
-from github_file_ops_server import make_github_request, push_changes_impl, extract_local_commit_info
+from github_file_ops_server import make_github_request, push_changes_impl, extract_local_commit_info, create_pull_request_impl
 
 
 class TestMakeGithubRequest:
@@ -305,5 +305,241 @@ class TestPushChanges:
         
         assert result["success"] is False
         assert "Missing required parameters" in result["error"]
+
+
+class TestCreatePullRequest:
+    """Test the new create_pull_request_impl function."""
+    
+    @patch('github_file_ops_server.make_github_request')
+    def test_create_pull_request_success(self, mock_github_request):
+        """Test successful pull request creation."""
+        # Mock GitHub API responses
+        mock_github_request.side_effect = [
+            # Check head branch exists
+            {"ref": "refs/heads/feature-branch", "object": {"sha": "abc123"}},
+            # Check base branch exists
+            {"ref": "refs/heads/main", "object": {"sha": "def456"}},
+            # Create pull request
+            {
+                "id": 1001,
+                "number": 42,
+                "html_url": "https://github.com/owner/repo/pull/42",
+                "title": "Add new feature",
+                "body": "This PR adds a new feature to the system."
+            }
+        ]
+        
+        result = create_pull_request_impl(
+            title="Add new feature",
+            body="This PR adds a new feature to the system.",
+            head_branch="feature-branch",
+            base_branch="main",
+            owner="testowner",
+            repo="testrepo",
+            github_token="token123"
+        )
+        
+        assert result["success"] is True
+        assert result["pr_number"] == 42
+        assert result["pr_url"] == "https://github.com/owner/repo/pull/42"
+        assert result["pr_id"] == 1001
+        assert "Successfully created PR #42" in result["message"]
+        
+        # Verify API calls
+        assert mock_github_request.call_count == 3
+        
+        # Check pull request creation call
+        pr_creation_call = mock_github_request.call_args_list[2]
+        assert pr_creation_call.args[0] == "POST"
+        assert "/pulls" in pr_creation_call.args[1]
+        pr_data = pr_creation_call.args[3]
+        assert pr_data["title"] == "Add new feature"
+        assert pr_data["body"] == "This PR adds a new feature to the system."
+        assert pr_data["head"] == "feature-branch"
+        assert pr_data["base"] == "main"
+        assert pr_data["maintainer_can_modify"] is True
+    
+    @patch('github_file_ops_server.make_github_request')
+    def test_create_pull_request_default_base_branch(self, mock_github_request):
+        """Test pull request creation with default base branch."""
+        # Mock GitHub API responses
+        mock_github_request.side_effect = [
+            # Check head branch exists
+            {"ref": "refs/heads/feature-branch", "object": {"sha": "abc123"}},
+            # Check base branch exists (default: main)
+            {"ref": "refs/heads/main", "object": {"sha": "def456"}},
+            # Create pull request
+            {
+                "id": 1002,
+                "number": 43,
+                "html_url": "https://github.com/owner/repo/pull/43",
+                "title": "Fix bug",
+                "body": ""
+            }
+        ]
+        
+        result = create_pull_request_impl(
+            title="Fix bug",
+            body="",
+            head_branch="feature-branch",
+            # base_branch not specified, should default to "main"
+            owner="testowner",
+            repo="testrepo",
+            github_token="token123"
+        )
+        
+        assert result["success"] is True
+        assert result["pr_number"] == 43
+        
+        # Check that base branch check used "main"
+        base_branch_check = mock_github_request.call_args_list[1]
+        assert "/refs/heads/main" in base_branch_check.args[1]
+    
+    @patch('github_file_ops_server.make_github_request')
+    def test_create_pull_request_head_branch_not_exists(self, mock_github_request):
+        """Test error when head branch doesn't exist."""
+        # Mock head branch check to fail
+        mock_github_request.side_effect = Exception("Branch not found")
+        
+        result = create_pull_request_impl(
+            title="Test PR",
+            body="Test body",
+            head_branch="nonexistent-branch",
+            owner="testowner",
+            repo="testrepo",
+            github_token="token123"
+        )
+        
+        assert result["success"] is False
+        assert "Head branch 'nonexistent-branch' does not exist" in result["error"]
+    
+    @patch('github_file_ops_server.make_github_request')
+    def test_create_pull_request_base_branch_not_exists(self, mock_github_request):
+        """Test error when base branch doesn't exist."""
+        # Mock head branch check to succeed, base branch check to fail
+        mock_github_request.side_effect = [
+            {"ref": "refs/heads/feature-branch", "object": {"sha": "abc123"}},
+            Exception("Base branch not found")
+        ]
+        
+        result = create_pull_request_impl(
+            title="Test PR",
+            body="Test body",
+            head_branch="feature-branch",
+            base_branch="nonexistent-base",
+            owner="testowner",
+            repo="testrepo",
+            github_token="token123"
+        )
+        
+        assert result["success"] is False
+        assert "Base branch 'nonexistent-base' does not exist" in result["error"]
+    
+    @patch('github_file_ops_server.make_github_request')
+    def test_create_pull_request_already_exists(self, mock_github_request):
+        """Test error when pull request already exists."""
+        # Mock branch checks to succeed, PR creation to fail with "already exists"
+        mock_github_request.side_effect = [
+            {"ref": "refs/heads/feature-branch", "object": {"sha": "abc123"}},
+            {"ref": "refs/heads/main", "object": {"sha": "def456"}},
+            Exception("GitHub API error: 422 A pull request already exists")
+        ]
+        
+        result = create_pull_request_impl(
+            title="Test PR",
+            body="Test body",
+            head_branch="feature-branch",
+            owner="testowner",
+            repo="testrepo",
+            github_token="token123"
+        )
+        
+        assert result["success"] is False
+        assert "already exists" in result["error"]
+        assert "'feature-branch'" in result["error"]
+        assert "'main'" in result["error"]
+    
+    @patch('github_file_ops_server.make_github_request')
+    def test_create_pull_request_no_commits(self, mock_github_request):
+        """Test error when no commits between branches."""
+        # Mock branch checks to succeed, PR creation to fail with "no commits"
+        mock_github_request.side_effect = [
+            {"ref": "refs/heads/feature-branch", "object": {"sha": "abc123"}},
+            {"ref": "refs/heads/main", "object": {"sha": "def456"}},
+            Exception("GitHub API error: 422 No commits between main and feature-branch")
+        ]
+        
+        result = create_pull_request_impl(
+            title="Test PR",
+            body="Test body",
+            head_branch="feature-branch",
+            owner="testowner",
+            repo="testrepo",
+            github_token="token123"
+        )
+        
+        assert result["success"] is False
+        assert "No commits between" in result["error"]
+        assert "nothing to create PR for" in result["error"]
+    
+    def test_create_pull_request_missing_parameters(self):
+        """Test error handling for missing required parameters."""
+        # Missing owner, repo, github_token
+        result = create_pull_request_impl(
+            title="Test PR",
+            body="Test body",
+            head_branch="feature-branch"
+        )
+        
+        assert result["success"] is False
+        assert "Missing required parameters: owner, repo, or github_token" in result["error"]
+        
+        # Missing title
+        result = create_pull_request_impl(
+            title="",
+            body="Test body",
+            head_branch="feature-branch",
+            owner="testowner",
+            repo="testrepo",
+            github_token="token123"
+        )
+        
+        assert result["success"] is False
+        assert "Missing required parameters: title and head_branch" in result["error"]
+        
+        # Missing head_branch
+        result = create_pull_request_impl(
+            title="Test PR",
+            body="Test body",
+            head_branch="",
+            owner="testowner",
+            repo="testrepo",
+            github_token="token123"
+        )
+        
+        assert result["success"] is False
+        assert "Missing required parameters: title and head_branch" in result["error"]
+    
+    @patch('github_file_ops_server.make_github_request')
+    def test_create_pull_request_general_api_error(self, mock_github_request):
+        """Test handling of general GitHub API errors."""
+        # Mock branch checks to succeed, PR creation to fail with generic error
+        mock_github_request.side_effect = [
+            {"ref": "refs/heads/feature-branch", "object": {"sha": "abc123"}},
+            {"ref": "refs/heads/main", "object": {"sha": "def456"}},
+            Exception("GitHub API error: 403 Forbidden")
+        ]
+        
+        result = create_pull_request_impl(
+            title="Test PR",
+            body="Test body",
+            head_branch="feature-branch",
+            owner="testowner",
+            repo="testrepo",
+            github_token="token123"
+        )
+        
+        assert result["success"] is False
+        assert "Failed to create pull request: GitHub API error: 403 Forbidden" in result["error"]
 
 

@@ -37,10 +37,15 @@ def get_base_tools(mode: str = None) -> str:
         "TodoRead",
     ]
     
-    # Add MCP GitHub file operations tools for pr-update mode
+    # Add MCP GitHub file operations tools
     if mode == "pr-update":
         base_tools.extend([
             "mcp__github-file-ops__push_changes"
+        ])
+    elif mode == "pr-gen":
+        base_tools.extend([
+            "mcp__github-file-ops__push_changes",
+            "mcp__github-file-ops__create_pull_request"
         ])
     
     return ",".join(base_tools)
@@ -110,7 +115,9 @@ def main() -> None:
     print("✅ Tool configuration prepared")
     print(f"📦 Base tools: {len(base_tools.split(','))} tools")
     if mode == "pr-update":
-        print("🔧 MCP GitHub file operations tools enabled for pr-update mode")
+        print("🔧 MCP GitHub file operations tools enabled for pr-update mode (push_changes)")
+    elif mode == "pr-gen":
+        print("🔧 MCP GitHub file operations tools enabled for pr-gen mode (push_changes, create_pull_request)")
     if args.allowed_tools:
         additional_count = len([t for t in args.allowed_tools.split(",") if t.strip()])
         print(f"➕ Additional tools: {additional_count} tools")
