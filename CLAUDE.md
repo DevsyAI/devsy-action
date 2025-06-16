@@ -162,10 +162,10 @@ Currently no automated linting is configured. Follow PEP 8 conventions manually.
 ### GitHub MCP Integration
 The action uses Model Context Protocol (MCP) to give Claude Code access to GitHub APIs:
 - **Built-in GitHub MCP**: Configured via `mcp_config` in the base action for standard GitHub operations
-- **GitHub File Operations MCP**: Custom server for direct GitHub API commits and deletions
+- **GitHub File Operations MCP**: Custom server for pushing local git commits to GitHub via API
   - Only enabled for `pr-update` mode to trigger GitHub checks when normal git operations might not
-  - Uses GitHub API directly to create commits that can bypass GitHub Actions commit restrictions
-  - Provides `commit_files` and `delete_files` tools that work around check trigger limitations
+  - Uses GitHub API directly to recreate local commits (including pre-commit hook changes) on GitHub
+  - Provides `push_changes` tool that reads a local commit and recreates it on GitHub
 - Uses the exchanged token for authentication
 - Enables advanced GitHub repository manipulation beyond standard git commands
 

@@ -38,6 +38,23 @@ class TestGetBaseTools:
         tools = result.split(",")
         assert len(tools) >= 16  # Should have many base tools (added mv)
         assert all(tool.strip() for tool in tools)  # No empty tools
+    
+    def test_get_base_tools_pr_update_mode_includes_mcp_tools(self):
+        """Test that pr-update mode includes MCP GitHub file operations tools."""
+        result = get_base_tools("pr-update")
+        assert "mcp__github-file-ops__push_changes" in result
+    
+    def test_get_base_tools_pr_update_mode_excludes_removed_tools(self):
+        """Test that pr-update mode does not include removed MCP tools."""
+        result = get_base_tools("pr-update")
+        assert "mcp__github-file-ops__commit_files" not in result
+        assert "mcp__github-file-ops__delete_files" not in result
+    
+    def test_get_base_tools_other_modes_exclude_mcp_tools(self):
+        """Test that other modes do not include MCP GitHub file operations tools."""
+        for mode in ["pr-gen", "plan-gen", None]:
+            result = get_base_tools(mode)
+            assert "mcp__github-file-ops__push_changes" not in result
 
 
 class TestGetDefaultDisallowedTools:

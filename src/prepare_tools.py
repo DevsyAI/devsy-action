@@ -40,9 +40,7 @@ def get_base_tools(mode: str = None) -> str:
     # Add MCP GitHub file operations tools for pr-update mode
     if mode == "pr-update":
         base_tools.extend([
-            "mcp__github-file-ops__push_changes",
-            "mcp__github-file-ops__commit_files",
-            "mcp__github-file-ops__delete_files"
+            "mcp__github-file-ops__push_changes"
         ])
     
     return ",".join(base_tools)
