@@ -28,13 +28,11 @@ Implement the requested feature or fix as described above. Create production-rea
 - Run tests to verify functionality (if available in your environment)
 - Review implementation for quality and integration
 - Ensure no regressions or breaking changes
-- **CRITICAL**: Follow the hybrid git + MCP workflow:
-  1. Create branch using `git checkout -b`
-  2. Stage changes with `git add`
-  3. Commit locally with `git commit` (handles pre-commit hooks)
-  4. Push using `mcp__github-file-ops__push_changes` tool
-  5. Create pull request
-- **Verify working directory is clean** (`git status`) before pushing
+- **CRITICAL**: Follow git workflow with MCP push:
+  1. Create branch, stage changes, commit locally
+  2. Push using `mcp__github-file-ops__push_changes` tool
+  3. Create pull request
+- Verify clean working directory before pushing
 
 {{ custom_instructions }}
 
@@ -46,7 +44,5 @@ Implement the requested feature or fix as described above. Create production-rea
 - ✅ Tests pass (if runnable)
 - ✅ Code is maintainable and production-ready
 - ✅ Branch created with descriptive name
-- ✅ **ALL changes committed locally** using git add/commit
-- ✅ Pre-commit hooks handled properly if they modify files
-- ✅ **Changes pushed via MCP tool** (not git push)
+- ✅ **Changes committed locally and pushed via MCP tool**
 - ✅ Pull request opened with comprehensive description

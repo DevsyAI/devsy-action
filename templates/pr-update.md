@@ -38,11 +38,10 @@ Address all review feedback professionally and thoroughly. Treat this as an oppo
 - Ensure no regressions were introduced
 - Run tests to validate changes (if available in your environment)
 - Self-review as if you were a new reviewer
-- **CRITICAL**: Use local git + MCP workflow for commits:
-  1. Stage changes: `git add .` (or specific files)
-  2. Commit locally: `git commit -m "Address review feedback: [summary]"`
-  3. Push to GitHub: `mcp__github-file-ops__push_changes`
-- **Verify working directory is clean** (`git status`) before completing
+- **CRITICAL**: Use git workflow with MCP push:
+  1. Stage and commit changes locally
+  2. Push using `mcp__github-file-ops__push_changes`
+- Verify clean working directory before completing
 
 {{ custom_instructions }}
 
@@ -53,7 +52,6 @@ Address all review feedback professionally and thoroughly. Treat this as an oppo
 - ✅ Tests pass (if runnable)
 - ✅ Implementation follows established patterns
 - ✅ PR still accomplishes its original goals
-- ✅ **ALL changes committed using local git + MCP workflow** (working directory clean)
-- ✅ Pre-commit hooks run automatically and their changes included in commit
+- ✅ **Changes committed locally and pushed via MCP tool**
 - ✅ Changes committed with descriptive messages referencing feedback
 - ✅ Review responses provided where needed
