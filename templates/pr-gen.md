@@ -9,7 +9,7 @@
 {{ user_prompt }}
 
 ## Your Mission
-Implement the requested feature or fix as described above. Create production-ready code that integrates seamlessly with the existing codebase, then use GitHub MCP tools to create a branch, commit changes, and open a pull request.
+Implement the requested feature or fix as described above. Create production-ready code that integrates seamlessly with the existing codebase, then use the hybrid git + MCP workflow to create a branch, commit changes locally, push via MCP tools, and open a pull request.
 
 ## Implementation Approach
 
@@ -28,8 +28,13 @@ Implement the requested feature or fix as described above. Create production-rea
 - Run tests to verify functionality (if available in your environment)
 - Review implementation for quality and integration
 - Ensure no regressions or breaking changes
-- **CRITICAL**: Create branch, commit ALL changes completely, and open pull request using GitHub MCP tools
-- **Verify working directory is clean** (`git status`) before completing
+- **CRITICAL**: Follow the hybrid git + MCP workflow:
+  1. Create branch using `git checkout -b`
+  2. Stage changes with `git add`
+  3. Commit locally with `git commit` (handles pre-commit hooks)
+  4. Push using `mcp__github-file-ops__push_changes` tool
+  5. Create pull request
+- **Verify working directory is clean** (`git status`) before pushing
 
 {{ custom_instructions }}
 
@@ -41,6 +46,7 @@ Implement the requested feature or fix as described above. Create production-rea
 - ✅ Tests pass (if runnable)
 - ✅ Code is maintainable and production-ready
 - ✅ Branch created with descriptive name
-- ✅ **ALL changes committed completely** (working directory clean)
+- ✅ **ALL changes committed locally** using git add/commit
 - ✅ Pre-commit hooks handled properly if they modify files
+- ✅ **Changes pushed via MCP tool** (not git push)
 - ✅ Pull request opened with comprehensive description
