@@ -259,7 +259,7 @@ runs:
           echo "✅ Setup script completed successfully"
         else
           echo "❌ Setup script not found: ${{ inputs.setup_script }}"
-          exit 1
+          echo "❌ Proceeding with execution, though some tools may not work as expected"
         fi
 
     - name: Run Claude Code with git and gh tools
