@@ -157,7 +157,8 @@ You have access to GitHub MCP tools for complete workflow automation. After impl
 
 3. **Push and PR Creation**: Use MCP push tool followed by GitHub CLI
    - Push via MCP: `mcp__github-file-ops__push_changes()`
-   - Create PR: `gh pr create --title "..." --body "..."`
+   - Create PR: `gh pr create --head <branch-name> --title "..." --body "..."`
+   - **IMPORTANT**: Always use `--head <branch-name>` flag when using MCP push tool
    - Write clear title and detailed description
 
 ### Git Workflow Requirements
@@ -169,6 +170,7 @@ You have access to GitHub MCP tools for complete workflow automation. After impl
 
 **GitHub CLI for PR Creation:**
 - Use `gh pr create` to create pull requests after pushing
-- Example: `gh pr create --title "feat: add new feature" --body "Description..."`
+- When using MCP push_changes: `gh pr create --head <branch-name> --title "feat: add new feature" --body "Description..."`
+- The `--head` flag is REQUIRED when using the MCP push tool to specify the branch explicitly
 
 Your goal is to create production-ready code that not only meets the requirements but exemplifies the quality standards expected in the codebase, then seamlessly integrate it via GitHub operations.
