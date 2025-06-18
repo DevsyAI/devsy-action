@@ -207,7 +207,7 @@ runs:
         else
           # Fallback to generic identity
           git config --global user.email "no-reply@devsy.ai"
-          git config --global user.name "Devsy Bot"
+          git config --global user.name "devsy-bot"
           echo "✅ Configured git identity for Devsy Bot (fallback)"
         fi
         # Configure Git to use HTTPS instead of SSH for GitHub repositories
