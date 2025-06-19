@@ -76,7 +76,7 @@ jobs:
           model: ${{ inputs.model }}
           # === Tool Configuration ===
           # Uncomment and modify these based on your project needs:
-          # allowed_tools: 'Bash(npm:*),Bash(python:*),Bash(cargo:*)'
+          allowed_tools: 'Bash(python:*),Bash'
           disallowed_tools: ''
           
           # === Callback Configuration ===
