@@ -31,10 +31,11 @@ class TestSetGithubOutput:
         
         with patch.dict(os.environ, {'GITHUB_OUTPUT': str(output_file)}):
             set_github_output("key", "value")
+            # Check environment variable is set within the context
+            assert os.environ.get("key") == "value"
         
         content = output_file.read_text()
         assert "key=value" in content
-        assert os.environ.get("key") == "value"
 
     def test_set_github_output_no_file(self):
         """Test setting output when GITHUB_OUTPUT doesn't exist."""
