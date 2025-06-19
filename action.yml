@@ -109,7 +109,7 @@ outputs:
     value: ${{ steps.extract_outputs.outputs.plan_output }}
   token_source:
     description: "Authentication method used (devsy-bot or github-actions-bot)"
-    value: ${{ steps.token_exchange.outputs.token_source }}
+    value: ${{ steps.prepare_git.outputs.token_source }}
 
 runs:
   using: "composite"
@@ -160,59 +160,18 @@ runs:
       run: |
         /tmp/devsy-action-env/bin/python ${{ github.action_path }}/src/prepare_prompt.py
 
-    - name: Exchange for devsy-bot GitHub App token
-      id: token_exchange
+    - name: Prepare Git environment
+      id: prepare_git
       shell: bash
       env:
         GITHUB_TOKEN: ${{ github.token }}
         GITHUB_REPOSITORY: ${{ github.repository }}
         DEVSY_BACKEND_URL: ${{ inputs.backend_url }}
+        DEVSY_MODE: ${{ inputs.mode }}
+        DEVSY_PR_NUMBER: ${{ inputs.pr_number }}
+        DEVSY_REPO: ${{ github.repository }}
       run: |
-        echo "🔄 Attempting to exchange GitHub Actions token for devsy-bot token..."
-
-        # Run the Python token exchange script and capture output
-        TOKEN_EXCHANGE_OUTPUT=$(/tmp/devsy-action-env/bin/python ${{ github.action_path }}/src/github_token_exchange.py 2>&1)
-        TOKEN_EXCHANGE_EXIT_CODE=$?
-
-        echo "$TOKEN_EXCHANGE_OUTPUT"
-
-        if [ $TOKEN_EXCHANGE_EXIT_CODE -eq 0 ]; then
-          # Check which token source was used
-          if echo "$TOKEN_EXCHANGE_OUTPUT" | grep -q "Successfully exchanged token for devsy-bot"; then
-            echo "token_source=devsy-bot" >> $GITHUB_OUTPUT
-          else
-            echo "token_source=github-actions-bot" >> $GITHUB_OUTPUT
-          fi
-        else
-          echo "⚠️  Token exchange script failed, using default GitHub token"
-          echo "github_token=${{ github.token }}" >> $GITHUB_OUTPUT
-          echo "token_source=github-actions-bot" >> $GITHUB_OUTPUT
-        fi
-
-    - name: Configure Git identity
-      shell: bash
-      env:
-        GITHUB_TOKEN: ${{ steps.token_exchange.outputs.github_token }}
-      run: |
-        # Configure git identity based on the token source
-        if [ "${{ steps.token_exchange.outputs.token_source }}" = "devsy-bot" ]; then
-          # Get the bot's identity dynamically for verified commits
-          BOT_INFO=$(gh api user --jq '{login: .login, id: .id}')
-          BOT_LOGIN=$(echo "$BOT_INFO" | jq -r '.login')
-          BOT_ID=$(echo "$BOT_INFO" | jq -r '.id')
-          
-          git config --global user.email "${BOT_ID}+${BOT_LOGIN}@users.noreply.github.com"
-          git config --global user.name "$BOT_LOGIN"
-          echo "✅ Configured git identity for $BOT_LOGIN (ID: $BOT_ID)"
-        else
-          # Fallback to generic identity
-          git config --global user.email "no-reply@devsy.ai"
-          git config --global user.name "devsy-bot"
-          echo "✅ Configured git identity for Devsy Bot (fallback)"
-        fi
-        # Configure Git to use HTTPS instead of SSH for GitHub repositories
-        # This enables pip to install private GitHub packages using the GitHub token
-        git config --global url."https://github.com/".insteadOf git@github.com:
+        /tmp/devsy-action-env/bin/python ${{ github.action_path }}/src/prepare_git.py
 
     - name: Prepare tool configuration
       id: prepare_tools
@@ -224,23 +183,13 @@ runs:
           --allowed-tools "${{ inputs.allowed_tools }}" \
           --disallowed-tools "${{ inputs.disallowed_tools }}"
 
-    - name: Checkout appropriate branch
-      id: checkout_branch
-      shell: bash
-      env:
-        DEVSY_MODE: ${{ inputs.mode }}
-        DEVSY_PR_NUMBER: ${{ inputs.pr_number }}
-        GITHUB_TOKEN: ${{ steps.token_exchange.outputs.github_token }}
-        DEVSY_REPO: ${{ github.repository }}
-      run: |
-        /tmp/devsy-action-env/bin/python ${{ github.action_path }}/src/checkout_branch.py
 
     - name: Prepare MCP configuration
       id: prepare_mcp
       shell: bash
       env:
         DEVSY_MODE: ${{ inputs.mode }}
-        GITHUB_TOKEN: ${{ steps.token_exchange.outputs.github_token }}
+        GITHUB_TOKEN: ${{ steps.prepare_git.outputs.github_token }}
         GITHUB_ACTION_PATH: ${{ github.action_path }}
         DEVSY_PR_NUMBER: ${{ inputs.pr_number }}
       run: |
@@ -250,7 +199,7 @@ runs:
       if: inputs.setup_script != ''
       shell: bash
       env:
-        GITHUB_TOKEN: ${{ steps.token_exchange.outputs.github_token }}
+        GITHUB_TOKEN: ${{ steps.prepare_git.outputs.github_token }}
       run: |
         echo "🔧 Running setup script: ${{ inputs.setup_script }}"
         if [ -f "${{ inputs.setup_script }}" ]; then
@@ -280,7 +229,7 @@ runs:
         mcp_config: ${{ steps.prepare_mcp.outputs.mcp_config }}
       env:
         # GitHub CLI authentication
-        GITHUB_TOKEN: ${{ steps.token_exchange.outputs.github_token }}
+        GITHUB_TOKEN: ${{ steps.prepare_git.outputs.github_token }}
         
         # AWS Bedrock configuration (when use_bedrock is true)
         AWS_REGION: ${{ env.AWS_REGION }}
@@ -314,7 +263,7 @@ runs:
         DEVSY_PR_URL: ${{ steps.extract_outputs.outputs.pr_url }}
         DEVSY_PLAN_OUTPUT: ${{ steps.extract_outputs.outputs.plan_output }}
         DEVSY_EXECUTION_FILE: ${{ steps.run_claude.outputs.execution_file }}
-        DEVSY_TOKEN_SOURCE: ${{ steps.token_exchange.outputs.token_source }}
+        DEVSY_TOKEN_SOURCE: ${{ steps.prepare_git.outputs.token_source }}
         DEVSY_AUTH_TOKEN: ${{ inputs.callback_auth_token }}
         DEVSY_AUTH_HEADER: ${{ inputs.callback_auth_header }}
         DEVSY_REPOSITORY: ${{ github.repository }}
@@ -322,13 +271,13 @@ runs:
         /tmp/devsy-action-env/bin/python ${{ github.action_path }}/src/send_callback.py
 
     - name: Revoke devsy-bot token
-      if: always() && steps.token_exchange.outputs.token_source == 'devsy-bot'
+      if: always() && steps.prepare_git.outputs.token_source == 'devsy-bot'
       shell: bash
       run: |
         echo "🧹 Revoking devsy-bot token for security..."
         curl -L \
         -X DELETE \
         -H "Accept: application/vnd.github+json" \
-        -H "Authorization: Bearer ${{ steps.token_exchange.outputs.github_token }}" \
+        -H "Authorization: Bearer ${{ steps.prepare_git.outputs.github_token }}" \
         -H "X-GitHub-Api-Version: 2022-11-28" \
         ${GITHUB_API_URL:-https://api.github.com}/installation/token
