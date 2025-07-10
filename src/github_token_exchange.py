@@ -41,7 +41,7 @@ def get_github_token() -> str:
     default_token = os.getenv("GITHUB_TOKEN")
     if not default_token:
         raise ValueError("GITHUB_TOKEN environment variable is required for fallback")
-    
+
     print("Using default GitHub Actions token")
     set_github_output("github_token", default_token)
     return default_token
@@ -52,16 +52,16 @@ def get_oidc_token() -> str:
     # Get OIDC request environment variables
     token_request_url = os.getenv("ACTIONS_ID_TOKEN_REQUEST_URL")
     token_request_token = os.getenv("ACTIONS_ID_TOKEN_REQUEST_TOKEN")
-    
+
     if not token_request_url or not token_request_token:
         raise ValueError(
             "OIDC token request environment variables not found. "
             "Did you remember to add 'id-token: write' to your workflow permissions?"
         )
-    
+
     # Set audience for devsy-action
     audience = "devsy-action"
-    
+
     # Request the OIDC token
     try:
         response = requests.get(
@@ -72,13 +72,13 @@ def get_oidc_token() -> str:
             },
             timeout=30
         )
-        
+
         if response.status_code == 200:
             result = response.json()
             return result.get("value")
         else:
             raise Exception(f"OIDC token request failed with status {response.status_code}: {response.text}")
-            
+
     except requests.exceptions.RequestException as e:
         raise Exception(f"Failed to request OIDC token: {e}")
 
@@ -95,7 +95,7 @@ def exchange_for_devsy_bot_token(oidc_token: str) -> Optional[str]:
             exchange_url,
             headers={
                 "Authorization": f"Bearer {oidc_token}",
-                "Content-Type": "application/json", 
+                "Content-Type": "application/json",
                 "User-Agent": "devsy-action/1.0"
             },
             timeout=30,

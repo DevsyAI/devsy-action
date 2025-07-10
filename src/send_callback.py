@@ -1,6 +1,5 @@
 #!/usr/bin/env python3
-"""
-Send callback notification with execution results.
+"""Send callback notification with execution results.
 
 This script sends a POST request to the specified callback URL with the execution results.
 """
@@ -10,7 +9,7 @@ import json
 import os
 import sys
 from datetime import datetime, timezone
-from typing import Dict, Any, Optional
+from typing import Any, Dict, Optional
 
 import requests
 
@@ -40,7 +39,7 @@ def prepare_callback_data(
     """Prepare the callback data payload."""
     # Read execution file contents
     execution_file_contents = read_execution_file(execution_file)
-    
+
     # Decode base64-encoded plan_output if present
     decoded_plan_output = None
     if plan_output:
@@ -49,7 +48,7 @@ def prepare_callback_data(
         except Exception as e:
             print(f"⚠️  Warning: Failed to decode plan_output: {e}")
             decoded_plan_output = plan_output  # Fallback to raw value
-    
+
     return {
         "run_id": run_id,
         "run_url": run_url,
@@ -92,9 +91,9 @@ def send_callback(
     """Send the callback request."""
     try:
         response = requests.post(
-            url, 
-            json=data, 
-            headers=headers, 
+            url,
+            json=data,
+            headers=headers,
             timeout=timeout
         )
         response.raise_for_status()
@@ -123,7 +122,7 @@ def main() -> None:
     auth_token = os.environ.get("DEVSY_AUTH_TOKEN", "")
     auth_header = os.environ.get("DEVSY_AUTH_HEADER", "")
     repository = os.environ.get("DEVSY_REPOSITORY", "")
-    
+
     # Validate required parameters
     if not callback_url:
         print("Error: DEVSY_CALLBACK_URL environment variable is required")
@@ -176,7 +175,7 @@ def main() -> None:
 
     # Send callback
     success = send_callback(callback_url, callback_data, headers)
-    
+
     # Exit with appropriate code (but don't fail the action on callback failure)
     sys.exit(0)
 

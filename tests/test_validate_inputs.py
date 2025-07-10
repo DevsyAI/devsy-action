@@ -1,9 +1,10 @@
 """Tests for validate_inputs.py"""
 
-import pytest
 import sys
 from unittest.mock import patch
-from src.validate_inputs import validate_mode, validate_authentication, validate_mode_requirements, main
+
+import pytest
+from src.validate_inputs import main, validate_authentication, validate_mode, validate_mode_requirements
 
 
 class TestValidateMode:

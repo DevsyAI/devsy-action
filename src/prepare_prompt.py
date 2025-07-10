@@ -131,7 +131,7 @@ def main():
     github_token = os.environ.get("DEVSY_GITHUB_TOKEN", "")
     repo = os.environ.get("DEVSY_REPO", "")
     base_branch = os.environ.get("DEVSY_BASE_BRANCH", "main")
-    
+
     # Validate required parameters
     if not mode:
         print("Error: DEVSY_MODE environment variable is required")
@@ -142,7 +142,7 @@ def main():
     if not repo:
         print("Error: DEVSY_REPO environment variable is required")
         sys.exit(1)
-    
+
     # Parse PR number if provided
     pr_number = None
     if pr_number_str:
@@ -151,10 +151,10 @@ def main():
         except ValueError:
             print(f"Error: Invalid PR number: {pr_number_str}")
             sys.exit(1)
-    
+
     # Get user prompt from environment or file
     user_prompt = prompt
-    
+
     # Read prompt from file if provided (overrides environment prompt)
     if prompt_file and os.path.exists(prompt_file):
         with open(prompt_file, "r") as f:
@@ -187,7 +187,7 @@ def main():
         with open(os.environ.get("GITHUB_OUTPUT", "/dev/stdout"), "a") as f:
             # Use jq-compatible JSON serialization to handle untrusted content safely
             import subprocess
-            
+
             # Serialize system_prompt using jq for shell safety
             # Use -Rs to read entire input as single string, then remove trailing newline in jq
             system_prompt_json = subprocess.run(
@@ -197,8 +197,8 @@ def main():
                 capture_output=True,
                 check=True
             ).stdout.strip()
-            
-            # Serialize user_prompt using jq for shell safety  
+
+            # Serialize user_prompt using jq for shell safety
             user_prompt_json = subprocess.run(
                 ["jq", "-Rs", "rtrimstr(\"\\n\")"],
                 input=user_prompt_formatted,
@@ -206,7 +206,7 @@ def main():
                 capture_output=True,
                 check=True
             ).stdout.strip()
-            
+
             f.write(f"system_prompt={system_prompt_json}\n")
             f.write(f"user_prompt={user_prompt_json}\n")
 

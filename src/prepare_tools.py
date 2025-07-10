@@ -1,6 +1,5 @@
 #!/usr/bin/env python3
-"""
-Prepare tool configuration for Claude Code execution.
+"""Prepare tool configuration for Claude Code execution.
 
 This script combines base tools with additional allowed tools and handles disallowed tools.
 """
@@ -15,11 +14,12 @@ def get_base_tools(mode: str = None) -> str:
     
     Args:
         mode: The action mode (pr-gen, pr-update, plan-gen)
+
     """
     base_tools = [
         "Edit",
         "MultiEdit",
-        "Read", 
+        "Read",
         "Write",
         "Glob",
         "Grep",
@@ -36,13 +36,13 @@ def get_base_tools(mode: str = None) -> str:
         "TodoWrite",
         "TodoRead",
     ]
-    
+
     # Add MCP GitHub file operations tools for pr-update and pr-gen modes
     if mode in ["pr-update", "pr-gen"]:
         base_tools.extend([
             "mcp__github-file-ops__push_changes"
         ])
-    
+
     return ",".join(base_tools)
 
 
@@ -77,13 +77,13 @@ def main() -> None:
     """Main function to prepare tool configuration."""
     parser = argparse.ArgumentParser(description="Prepare tool configuration for Claude Code")
     parser.add_argument(
-        "--allowed-tools", 
-        default="", 
+        "--allowed-tools",
+        default="",
         help="Additional tools to allow (comma-separated)"
     )
     parser.add_argument(
-        "--disallowed-tools", 
-        default="", 
+        "--disallowed-tools",
+        default="",
         help="Tools to disallow (comma-separated)"
     )
     parser.add_argument(
@@ -114,11 +114,11 @@ def main() -> None:
     if args.allowed_tools:
         additional_count = len([t for t in args.allowed_tools.split(",") if t.strip()])
         print(f"➕ Additional tools: {additional_count} tools")
-    
+
     # Show default + user disallowed tools
     default_disallowed_count = len(get_default_disallowed_tools().split(','))
     print(f"🚫 Default disallowed tools: {default_disallowed_count} tools (WebFetch, WebSearch)")
-    
+
     if args.disallowed_tools:
         user_disallowed_count = len([t for t in args.disallowed_tools.split(",") if t.strip()])
         print(f"🚫 Additional disallowed tools: {user_disallowed_count} tools")

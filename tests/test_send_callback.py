@@ -2,19 +2,14 @@
 
 import base64
 import json
+import os
+import tempfile
+from datetime import datetime, timezone
+from unittest.mock import patch
+
 import pytest
 import responses
-import tempfile
-import os
-from unittest.mock import patch
-from datetime import datetime, timezone
-from src.send_callback import (
-    prepare_callback_data,
-    prepare_headers,
-    send_callback,
-    read_execution_file,
-    main
-)
+from src.send_callback import main, prepare_callback_data, prepare_headers, read_execution_file, send_callback
 
 
 class TestPrepareCallbackData:
@@ -33,7 +28,7 @@ class TestPrepareCallbackData:
             execution_file="execution.json",
             token_source="devsy-bot"
         )
-        
+
         assert result["run_id"] == "123"
         assert result["mode"] == "pr-gen"
         assert result["conclusion"] == "success"
@@ -58,18 +53,18 @@ class TestPrepareCallbackData:
             execution_file="exec.json",
             token_source="github-actions-bot"
         )
-        
+
         assert result["pr_number"] is None
         assert result["pr_url"] is None
         assert result["plan_output"] == "detailed plan"
         assert result["execution_file_contents"] is None  # File doesn't exist
-    
+
     def test_prepare_callback_data_base64_plan_output(self):
         """Test preparing callback data with base64-encoded plan output."""
         # Create a test plan with special characters
         test_plan = "# Plan with special chars\n\n- Step 1: Use `backticks`\n- Step 2: Use \"quotes\"\n- Step 3: Use $variables"
         encoded_plan = base64.b64encode(test_plan.encode('utf-8')).decode('ascii')
-        
+
         result = prepare_callback_data(
             run_id="123",
             run_url="https://example.com",
@@ -81,17 +76,17 @@ class TestPrepareCallbackData:
             execution_file="exec.json",
             token_source="github-actions-bot"
         )
-        
+
         assert result["plan_output"] == test_plan
         assert "`backticks`" in result["plan_output"]
         assert '"quotes"' in result["plan_output"]
         assert "$variables" in result["plan_output"]
-    
+
     def test_prepare_callback_data_invalid_base64(self):
         """Test handling of invalid base64 input."""
         # Invalid base64 string
         invalid_base64 = "not-valid-base64!!!"
-        
+
         result = prepare_callback_data(
             run_id="123",
             run_url="https://example.com",
@@ -103,7 +98,7 @@ class TestPrepareCallbackData:
             execution_file="exec.json",
             token_source="github-actions-bot"
         )
-        
+
         # Should fallback to raw value when decoding fails
         assert result["plan_output"] == invalid_base64
 
@@ -112,7 +107,7 @@ class TestPrepareCallbackData:
         result = prepare_callback_data(
             "123", "url", "mode", "success", "", "", "", "file", "source"
         )
-        
+
         timestamp = result["timestamp"]
         # Should be able to parse the timestamp
         parsed = datetime.fromisoformat(timestamp.replace('Z', '+00:00'))
@@ -125,7 +120,7 @@ class TestPrepareCallbackData:
             test_content = '{"test": "execution data", "costs": {"total": 0.50}}'
             f.write(test_content)
             temp_file_path = f.name
-        
+
         try:
             result = prepare_callback_data(
                 run_id="123",
@@ -138,7 +133,7 @@ class TestPrepareCallbackData:
                 execution_file=temp_file_path,
                 token_source="devsy-bot"
             )
-            
+
             assert result["execution_file"] == temp_file_path
             assert result["execution_file_contents"] == test_content
         finally:
@@ -155,7 +150,7 @@ class TestReadExecutionFile:
             test_content = '{"execution": "data", "costs": {"input_tokens": 100}}'
             f.write(test_content)
             temp_file_path = f.name
-        
+
         try:
             result = read_execution_file(temp_file_path)
             assert result == test_content
@@ -182,14 +177,14 @@ class TestReadExecutionFile:
         with tempfile.NamedTemporaryFile(mode='w', delete=False) as f:
             f.write("test content")
             temp_file_path = f.name
-        
+
         try:
             # Change permissions to make file unreadable
             os.chmod(temp_file_path, 0o000)
-            
+
             result = read_execution_file(temp_file_path)
             assert result is None
-            
+
             captured = capsys.readouterr()
             assert "⚠️  Warning: Failed to read execution file" in captured.out
         finally:
@@ -204,7 +199,7 @@ class TestPrepareHeaders:
     def test_prepare_headers_basic(self):
         """Test basic headers without authentication."""
         headers = prepare_headers("", "", "123", "owner/repo")
-        
+
         expected = {
             "Content-Type": "application/json",
             "X-GitHub-Run-ID": "123",
@@ -215,21 +210,21 @@ class TestPrepareHeaders:
     def test_prepare_headers_with_auth(self):
         """Test headers with authentication token."""
         headers = prepare_headers("token123", "", "123", "owner/repo")
-        
+
         assert headers["Authorization"] == "Bearer token123"
         assert headers["Content-Type"] == "application/json"
 
     def test_prepare_headers_custom_auth_header(self):
         """Test headers with custom auth header name."""
         headers = prepare_headers("token123", "X-API-Key", "123", "owner/repo")
-        
+
         assert headers["X-API-Key"] == "Bearer token123"
         assert "Authorization" not in headers
 
     def test_prepare_headers_empty_auth_header_name(self):
         """Test that empty auth header name defaults to Authorization."""
         headers = prepare_headers("token123", "", "123", "owner/repo")
-        
+
         assert headers["Authorization"] == "Bearer token123"
 
 
@@ -244,10 +239,10 @@ class TestSendCallback:
             "https://example.com/callback",
             status=200
         )
-        
+
         data = {"test": "data"}
         headers = {"Content-Type": "application/json"}
-        
+
         result = send_callback("https://example.com/callback", data, headers)
         assert result is True
 
@@ -259,30 +254,30 @@ class TestSendCallback:
             "https://example.com/callback",
             status=500
         )
-        
+
         data = {"test": "data"}
         headers = {"Content-Type": "application/json"}
-        
+
         result = send_callback("https://example.com/callback", data, headers)
         assert result is False
-        
+
         captured = capsys.readouterr()
         assert "⚠️  Warning: Failed to send callback" in captured.out
 
     @responses.activate
     def test_send_callback_timeout(self, capsys):
         """Test callback timeout handling."""
-        # responses doesn't have easy timeout simulation, 
+        # responses doesn't have easy timeout simulation,
         # so we'll use a different approach
         from requests.exceptions import Timeout
-        
+
         with patch('requests.post', side_effect=Timeout("Request timed out")):
             data = {"test": "data"}
             headers = {"Content-Type": "application/json"}
-            
+
             result = send_callback("https://example.com/callback", data, headers, timeout=1)
             assert result is False
-            
+
             captured = capsys.readouterr()
             assert "⚠️  Warning: Failed to send callback" in captured.out
 
@@ -294,12 +289,12 @@ class TestSendCallback:
             "https://example.com/callback",
             status=200
         )
-        
+
         test_data = {"run_id": "123", "mode": "pr-gen"}
         test_headers = {"Content-Type": "application/json", "Authorization": "Bearer token"}
-        
+
         send_callback("https://example.com/callback", test_data, test_headers)
-        
+
         # Verify request was made correctly
         assert len(responses.calls) == 1
         request = responses.calls[0].request

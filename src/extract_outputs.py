@@ -89,18 +89,18 @@ def extract_plan_content(content):
     """Extract plan content for plan-gen mode."""
     if not content:
         return ""
-    
+
     # Look for plan content between delimiter blocks
     import re
-    
+
     # Pattern to match content between START and END delimiters
     pattern = r'=== START OF PLAN MARKDOWN ===\s*(.*?)\s*=== END OF PLAN MARKDOWN ==='
     matches = re.findall(pattern, content, re.DOTALL)
-    
+
     if matches:
         # Return the content from the first delimited block found
         return matches[0].strip()
-    
+
     # Fallback: return the whole content if no delimited block found
     return content.strip()
 
@@ -134,7 +134,7 @@ def main():
         with open(github_output_file, "a") as f:
             f.write(f"pr_number={outputs.get('pr_number', '')}\n")
             f.write(f"pr_url={outputs.get('pr_url', '')}\n")
-            
+
             # Base64 encode plan_output to avoid shell parsing issues
             plan_output = outputs.get('plan_output', '')
             if plan_output:

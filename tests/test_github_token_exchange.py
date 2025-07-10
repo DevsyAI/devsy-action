@@ -2,15 +2,16 @@
 
 import json
 import os
+from unittest.mock import MagicMock, patch
+
 import pytest
 import responses
-from unittest.mock import patch, MagicMock
 from src.github_token_exchange import (
+    exchange_for_devsy_bot_token,
     get_github_token,
     get_oidc_token,
-    exchange_for_devsy_bot_token,
+    main,
     set_github_output,
-    main
 )
 
 
@@ -21,10 +22,10 @@ class TestSetGithubOutput:
         """Test setting output when GITHUB_OUTPUT exists."""
         output_file = tmp_path / "output"
         output_file.write_text("")
-        
+
         with patch.dict(os.environ, {'GITHUB_OUTPUT': str(output_file)}):
             set_github_output("key", "value")
-        
+
         content = output_file.read_text()
         assert "key=value" in content
 
@@ -37,7 +38,7 @@ class TestSetGithubOutput:
             assert os.environ.get("key") == "value"
 
 
-# Note: get_oidc_token is not a public function in the module, 
+# Note: get_oidc_token is not a public function in the module,
 # so we'll test it indirectly through exchange_for_devsy_bot_token
 
 
@@ -51,13 +52,13 @@ class TestGetGithubToken:
         """Test using override token."""
         output_file = tmp_path / "output"
         output_file.write_text("")
-        
+
         with patch.dict(os.environ, {
             'OVERRIDE_GITHUB_TOKEN': 'override-token',
             'GITHUB_OUTPUT': str(output_file)
         }):
             result = get_github_token()
-        
+
         assert result == "override-token"
         content = output_file.read_text()
         assert "github_token=override-token" in content
@@ -74,16 +75,16 @@ class TestGetGithubToken:
         """Test successful devsy-bot token exchange using OIDC."""
         output_file = tmp_path / "output"
         output_file.write_text("")
-        
+
         mock_oidc.return_value = "oidc-token"
         mock_exchange.return_value = "devsy-token"
-        
+
         with patch.dict(os.environ, {
             'GITHUB_TOKEN': 'github-token',
             'GITHUB_OUTPUT': str(output_file)
         }):
             result = get_github_token()
-        
+
         assert result == "devsy-token"
         mock_oidc.assert_called_once()
         mock_exchange.assert_called_once_with("oidc-token")

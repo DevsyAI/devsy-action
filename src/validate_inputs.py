@@ -1,6 +1,5 @@
 #!/usr/bin/env python3
-"""
-Validate inputs for the Devsy Action.
+"""Validate inputs for the Devsy Action.
 
 This script validates the required inputs for different modes and authentication methods.
 """
@@ -63,7 +62,7 @@ def main() -> None:
     prompt = os.environ.get("DEVSY_PROMPT", "")
     prompt_file = os.environ.get("DEVSY_PROMPT_FILE", "")
     pr_number = os.environ.get("DEVSY_PR_NUMBER", "")
-    
+
     # Validate mode is provided
     if not mode:
         print("Error: DEVSY_MODE environment variable is required")

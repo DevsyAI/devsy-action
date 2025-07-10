@@ -2,10 +2,11 @@
 
 import json
 import os
+from pathlib import Path
+from unittest.mock import MagicMock, mock_open, patch
+
 import pytest
 import responses
-from pathlib import Path
-from unittest.mock import patch, mock_open, MagicMock
 from src.prepare_prompt import load_template, render_template
 
 
@@ -17,23 +18,23 @@ class TestLoadTemplate:
         # Create a mock template directory structure
         templates_dir = tmp_path / "templates"
         templates_dir.mkdir()
-        
+
         template_file = templates_dir / "test-template.md"
         template_content = "This is a test template with {{ variable }}"
         template_file.write_text(template_content)
-        
+
         # Mock the script location to point to our test directory
         with patch('src.prepare_prompt.Path') as mock_path:
             mock_path(__file__).parent.parent = tmp_path
             result = load_template("test-template")
-        
+
         assert result == template_content
 
     def test_load_template_file_not_found(self, tmp_path):
         """Test template loading when file doesn't exist."""
         with patch('src.prepare_prompt.Path') as mock_path:
             mock_path(__file__).parent.parent = tmp_path
-            
+
             with pytest.raises(FileNotFoundError):
                 load_template("nonexistent-template")
 
@@ -123,7 +124,7 @@ Your role is: developer
 
 class TestPreparePrompt:
     """Test the main prepare_prompt functionality."""
-    
+
     @patch('subprocess.run')
     @patch('builtins.open', new_callable=mock_open)
     @patch('src.prepare_prompt.load_template')
@@ -132,7 +133,7 @@ class TestPreparePrompt:
         """Test PR generation mode with special characters that need JSON escaping."""
         # Setup
         mock_load_template.side_effect = lambda name: f"Template for {name}: {{{{ user_prompt }}}}"
-        
+
         # Mock subprocess.run to simulate jq behavior
         def mock_jq_run(cmd, **kwargs):
             result = MagicMock()
@@ -143,15 +144,16 @@ class TestPreparePrompt:
                 result.stdout = json.dumps(input_text.rstrip('\n'))
             result.returncode = 0
             return result
-        
+
         mock_subprocess.return_value = mock_jq_run(['jq'])
-        
+
         # Test with special characters
         test_prompt = 'Add `backticks` and "quotes" and $variables and $(commands)'
-        
-        from src.prepare_prompt import main
+
         import sys
-        
+
+        from src.prepare_prompt import main
+
         env_vars = {
             'DEVSY_MODE': 'pr-gen',
             'DEVSY_PROMPT': test_prompt,
@@ -160,17 +162,17 @@ class TestPreparePrompt:
             'DEVSY_BASE_BRANCH': 'main',
             'GITHUB_OUTPUT': '/tmp/test_output'
         }
-        
+
         with patch.dict(os.environ, env_vars):
             main()
-        
+
         # Verify subprocess was called with jq for JSON serialization
         assert mock_subprocess.called
         calls = mock_subprocess.call_args_list
-        
+
         # Should have 2 calls to jq (system_prompt and user_prompt)
         assert len(calls) == 2
-        
+
         # Check that jq was called with correct arguments
         for call in calls:
             args, kwargs = call
@@ -178,7 +180,7 @@ class TestPreparePrompt:
             assert 'input' in kwargs
             assert kwargs['text'] is True
             assert kwargs['capture_output'] is True
-    
+
     @patch('subprocess.run')
     def test_json_serialization_with_multiline_content(self, mock_subprocess):
         """Test that multiline content is properly JSON serialized."""
@@ -190,18 +192,19 @@ class TestPreparePrompt:
             result.stdout = json.dumps(input_text.rstrip('\n'))
             result.returncode = 0
             return result
-        
+
         mock_subprocess.side_effect = mock_jq_run
-        
+
         # Test multiline content
         multiline_text = """First line
 Second line with "quotes"
 Third line with `backticks`
 Fourth line with $variables"""
-        
-        from src.prepare_prompt import main
+
         import subprocess
-        
+
+        from src.prepare_prompt import main
+
         # Simulate the jq call
         result = subprocess.run(
             ["jq", "-Rs", 'rtrimstr("\\n")'],
@@ -210,33 +213,34 @@ Fourth line with $variables"""
             capture_output=True,
             check=True
         )
-        
+
         # Verify the mock was called
         assert mock_subprocess.called
-        
+
         # Verify the JSON output can be decoded
         json_output = result.stdout
         decoded = json.loads(json_output)
         assert 'quotes' in decoded
         assert 'backticks' in decoded
         assert '$variables' in decoded
-    
+
     @patch('subprocess.run')
     def test_json_serialization_handles_jq_failure(self, mock_subprocess):
         """Test that jq failures are handled properly."""
         # Mock subprocess to simulate jq failure
         mock_subprocess.side_effect = Exception("jq not found")
-        
-        from src.prepare_prompt import main
+
         import sys
-        
+
+        from src.prepare_prompt import main
+
         env_vars = {
             'DEVSY_MODE': 'pr-gen',
             'DEVSY_PROMPT': 'test',
             'DEVSY_GITHUB_TOKEN': 'fake-token',
             'DEVSY_REPO': 'test/repo'
         }
-        
+
         with patch.dict(os.environ, env_vars):
             with pytest.raises(SystemExit):
                 main()

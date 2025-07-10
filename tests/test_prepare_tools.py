@@ -2,9 +2,16 @@
 
 import os
 import tempfile
+from unittest.mock import mock_open, patch
+
 import pytest
-from unittest.mock import patch, mock_open
-from src.prepare_tools import get_base_tools, get_default_disallowed_tools, combine_tools, set_github_output, main
+from src.prepare_tools import (
+    combine_tools,
+    get_base_tools,
+    get_default_disallowed_tools,
+    main,
+    set_github_output,
+)
 
 
 class TestGetBaseTools:
@@ -38,23 +45,23 @@ class TestGetBaseTools:
         tools = result.split(",")
         assert len(tools) >= 16  # Should have many base tools (added mv)
         assert all(tool.strip() for tool in tools)  # No empty tools
-    
+
     def test_get_base_tools_pr_update_mode_includes_mcp_tools(self):
         """Test that pr-update mode includes MCP GitHub file operations tools."""
         result = get_base_tools("pr-update")
         assert "mcp__github-file-ops__push_changes" in result
-    
+
     def test_get_base_tools_pr_gen_mode_includes_mcp_tools(self):
         """Test that pr-gen mode includes MCP GitHub file operations tools."""
         result = get_base_tools("pr-gen")
         assert "mcp__github-file-ops__push_changes" in result
-    
+
     def test_get_base_tools_pr_update_mode_excludes_removed_tools(self):
         """Test that pr-update mode does not include removed MCP tools."""
         result = get_base_tools("pr-update")
         assert "mcp__github-file-ops__commit_files" not in result
         assert "mcp__github-file-ops__delete_files" not in result
-    
+
     def test_get_base_tools_other_modes_exclude_mcp_tools(self):
         """Test that plan-gen and None modes do not include MCP GitHub file operations tools."""
         for mode in ["plan-gen", None]:
@@ -64,18 +71,18 @@ class TestGetBaseTools:
 
 class TestGetDefaultDisallowedTools:
     """Test getting default disallowed tools."""
-    
+
     def test_get_default_disallowed_tools_returns_string(self):
         """Test that get_default_disallowed_tools returns a string."""
         result = get_default_disallowed_tools()
         assert isinstance(result, str)
-    
+
     def test_get_default_disallowed_tools_contains_expected_tools(self):
         """Test that default disallowed tools contain WebFetch and WebSearch."""
         result = get_default_disallowed_tools()
         assert "WebFetch" in result
         assert "WebSearch" in result
-    
+
     def test_get_default_disallowed_tools_format(self):
         """Test that default disallowed tools are comma-separated."""
         result = get_default_disallowed_tools()
@@ -116,10 +123,10 @@ class TestSetGithubOutput:
         """Test setting output when GITHUB_OUTPUT file exists."""
         output_file = tmp_path / "github_output"
         output_file.write_text("")
-        
+
         with patch.dict(os.environ, {'GITHUB_OUTPUT': str(output_file)}):
             set_github_output("test_key", "test_value")
-        
+
         content = output_file.read_text()
         assert "test_key=test_value\n" in content
 
@@ -127,7 +134,7 @@ class TestSetGithubOutput:
         """Test setting output when no GITHUB_OUTPUT file."""
         with patch.dict(os.environ, {}, clear=True):
             set_github_output("test_key", "test_value")
-        
+
         captured = capsys.readouterr()
         assert "test_key=test_value" in captured.out
 
@@ -135,11 +142,11 @@ class TestSetGithubOutput:
         """Test multiple calls to set_github_output."""
         output_file = tmp_path / "github_output"
         output_file.write_text("")
-        
+
         with patch.dict(os.environ, {'GITHUB_OUTPUT': str(output_file)}):
             set_github_output("key1", "value1")
             set_github_output("key2", "value2")
-        
+
         content = output_file.read_text()
         assert "key1=value1\n" in content
         assert "key2=value2\n" in content
@@ -150,40 +157,38 @@ class TestSetGithubOutput:
 
 class TestMainFunction:
     """Test main function integration."""
-    
+
     @patch('src.prepare_tools.set_github_output')
     def test_main_with_default_disallowed_tools(self, mock_set_output):
         """Test that main function includes default disallowed tools."""
         import sys
-        from src.prepare_tools import main
-        
+
         test_args = ['prepare_tools.py']
-        
+
         with patch.object(sys, 'argv', test_args):
             main()
-        
+
         # Check that set_github_output was called with default disallowed tools
         calls = mock_set_output.call_args_list
         disallowed_call = [call for call in calls if call[0][0] == 'disallowed_tools'][0]
-        
+
         # Should contain WebFetch and WebSearch
         assert disallowed_call[0][1] == "WebFetch,WebSearch"
-    
+
     @patch('src.prepare_tools.set_github_output')
     def test_main_combines_user_disallowed_tools(self, mock_set_output):
         """Test that main function combines default and user disallowed tools."""
         import sys
-        from src.prepare_tools import main
-        
+
         test_args = ['prepare_tools.py', '--disallowed-tools', 'CustomTool,AnotherTool']
-        
+
         with patch.object(sys, 'argv', test_args):
             main()
-        
+
         # Check that set_github_output was called with combined disallowed tools
         calls = mock_set_output.call_args_list
         disallowed_call = [call for call in calls if call[0][0] == 'disallowed_tools'][0]
-        
+
         # Should contain default tools plus user tools
         assert "WebFetch" in disallowed_call[0][1]
         assert "WebSearch" in disallowed_call[0][1]

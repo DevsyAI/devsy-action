@@ -1,11 +1,12 @@
 """Tests for checkout_branch.py"""
 
 import os
+import subprocess
+from unittest.mock import MagicMock, patch
+
 import pytest
 import responses
-import subprocess
-from unittest.mock import patch, MagicMock
-from src.checkout_branch import checkout_pr_branch, fetch_github_data, run_git_command, main
+from src.checkout_branch import checkout_pr_branch, fetch_github_data, main, run_git_command
 
 
 class TestFetchGithubData:
@@ -17,35 +18,35 @@ class TestFetchGithubData:
         endpoint = "https://api.github.com/repos/owner/repo/pulls/123"
         token = "test-token"
         mock_response = {"number": 123, "title": "Test PR"}
-        
+
         responses.add(
             responses.GET,
             endpoint,
             json=mock_response,
             status=200
         )
-        
+
         result = fetch_github_data(endpoint, token)
         assert result == mock_response
-        
+
         # Verify headers
         assert len(responses.calls) == 1
         request = responses.calls[0].request
         assert request.headers["Authorization"] == "token test-token"
         assert request.headers["Accept"] == "application/vnd.github.v3+json"
 
-    @responses.activate  
+    @responses.activate
     def test_fetch_github_data_failure(self):
         """Test GitHub API failure."""
         endpoint = "https://api.github.com/repos/owner/repo/pulls/123"
         token = "test-token"
-        
+
         responses.add(
             responses.GET,
             endpoint,
             status=404
         )
-        
+
         with pytest.raises(Exception):
             fetch_github_data(endpoint, token)
 
@@ -61,10 +62,10 @@ class TestRunGitCommand:
             stderr="",
             returncode=0
         )
-        
+
         result = run_git_command(["git", "branch", "--show-current"], "getting current branch")
         assert result == "main"
-        
+
         mock_run.assert_called_once_with(
             ["git", "branch", "--show-current"],
             capture_output=True,
@@ -81,7 +82,7 @@ class TestRunGitCommand:
             cmd=["git", "branch"],
             stderr="fatal: not a git repository"
         )
-        
+
         with pytest.raises(subprocess.CalledProcessError):
             run_git_command(["git", "branch"], "listing branches")
 
@@ -103,31 +104,31 @@ class TestCheckoutPrBranch:
                 "ref": "main"
             }
         }
-        
+
         responses.add(
             responses.GET,
             "https://api.github.com/repos/owner/repo/pulls/123",
             json=pr_data,
             status=200
         )
-        
+
         # Mock git commands - setup side effects for different commands
         def git_side_effect(command, description):
             if command == ["git", "branch", "--show-current"]:
                 return "feature-branch"
             return ""
-        
+
         mock_git.side_effect = git_side_effect
-        
+
         result = checkout_pr_branch(123, "test-token", "owner/repo")
-        
+
         assert result["success"] is True
         assert result["head_branch"] == "feature-branch"
         assert result["base_branch"] == "main"
         assert result["current_branch"] == "feature-branch"
         assert result["is_fork_pr"] is False
         assert result["head_repo"] == "owner/repo"
-        
+
         # Verify git commands were called in order
         assert mock_git.call_count == 3
         calls = mock_git.call_args_list
@@ -149,14 +150,14 @@ class TestCheckoutPrBranch:
                 "ref": "main"
             }
         }
-        
+
         responses.add(
             responses.GET,
             "https://api.github.com/repos/owner/repo/pulls/123",
             json=pr_data,
             status=200
         )
-        
+
         # Mock git commands - simulate remote add failing (already exists)
         def git_side_effect(command, description):
             if command == ["git", "remote", "add", "pr-fork", "https://github.com/contributor/repo.git"]:
@@ -164,11 +165,11 @@ class TestCheckoutPrBranch:
             elif command == ["git", "branch", "--show-current"]:
                 return "feature-branch"
             return ""
-        
+
         mock_git.side_effect = git_side_effect
-        
+
         result = checkout_pr_branch(123, "test-token", "owner/repo")
-        
+
         assert result["success"] is True
         assert result["head_branch"] == "feature-branch"
         assert result["base_branch"] == "main"
@@ -185,9 +186,9 @@ class TestCheckoutPrBranch:
             "https://api.github.com/repos/owner/repo/pulls/123",
             status=404
         )
-        
+
         result = checkout_pr_branch(123, "test-token", "owner/repo")
-        
+
         assert result["success"] is False
         assert "error" in result
         mock_git.assert_not_called()
@@ -205,21 +206,21 @@ class TestCheckoutPrBranch:
                 "ref": "main"
             }
         }
-        
+
         responses.add(
             responses.GET,
             "https://api.github.com/repos/owner/repo/pulls/123",
             json=pr_data,
             status=200
         )
-        
+
         # Mock git fetch to fail
         mock_git.side_effect = subprocess.CalledProcessError(
             1, ["git", "fetch"], stderr="fatal: repository not found"
         )
-        
+
         result = checkout_pr_branch(123, "test-token", "owner/repo")
-        
+
         assert result["success"] is False
         assert "error" in result
 
@@ -236,24 +237,24 @@ class TestCheckoutPrBranch:
                 "ref": "main"
             }
         }
-        
+
         responses.add(
             responses.GET,
             "https://api.github.com/repos/owner/repo/pulls/123",
             json=pr_data,
             status=200
         )
-        
+
         # Mock git commands to return wrong branch name
         def git_side_effect(command, description):
             if command == ["git", "branch", "--show-current"]:
                 return "main"  # Wrong branch
             return ""
-        
+
         mock_git.side_effect = git_side_effect
-        
+
         result = checkout_pr_branch(123, "test-token", "owner/repo")
-        
+
         assert result["success"] is False
         assert "Failed to checkout correct branch" in result["error"]
 
@@ -268,17 +269,17 @@ class TestMain:
             "success": True,
             "current_branch": "feature-branch"
         }
-        
+
         env_vars = {
             "DEVSY_MODE": "pr-update",
             "DEVSY_PR_NUMBER": "123",
             "GITHUB_TOKEN": "test-token",
             "DEVSY_REPO": "owner/repo"
         }
-        
+
         with patch.dict(os.environ, env_vars, clear=True):
             main()  # Should not raise exception
-        
+
         mock_checkout.assert_called_once_with(123, "test-token", "owner/repo")
 
     @patch('src.checkout_branch.checkout_pr_branch')
@@ -288,19 +289,19 @@ class TestMain:
             "success": False,
             "error": "Checkout failed"
         }
-        
+
         env_vars = {
             "DEVSY_MODE": "pr-update",
             "DEVSY_PR_NUMBER": "123",
             "GITHUB_TOKEN": "test-token",
             "DEVSY_REPO": "owner/repo"
         }
-        
+
         with patch.dict(os.environ, env_vars, clear=True):
             with pytest.raises(SystemExit) as exc_info:
                 main()
             assert exc_info.value.code == 1
-        
+
         mock_checkout.assert_called_once_with(123, "test-token", "owner/repo")
 
     def test_main_pr_gen_mode(self):
@@ -310,7 +311,7 @@ class TestMain:
             "GITHUB_TOKEN": "test-token",
             "DEVSY_REPO": "owner/repo"
         }
-        
+
         with patch.dict(os.environ, env_vars, clear=True):
             main()  # Should not raise exception
 
@@ -327,7 +328,7 @@ class TestMain:
             "DEVSY_MODE": "pr-update",
             "DEVSY_REPO": "owner/repo"
         }
-        
+
         with patch.dict(os.environ, env_vars, clear=True):
             with pytest.raises(SystemExit) as exc_info:
                 main()
@@ -339,7 +340,7 @@ class TestMain:
             "DEVSY_MODE": "pr-update",
             "GITHUB_TOKEN": "test-token"
         }
-        
+
         with patch.dict(os.environ, env_vars, clear=True):
             with pytest.raises(SystemExit) as exc_info:
                 main()
@@ -352,7 +353,7 @@ class TestMain:
             "GITHUB_TOKEN": "test-token",
             "DEVSY_REPO": "owner/repo"
         }
-        
+
         with patch.dict(os.environ, env_vars, clear=True):
             with pytest.raises(SystemExit) as exc_info:
                 main()
@@ -366,7 +367,7 @@ class TestMain:
             "GITHUB_TOKEN": "test-token",
             "DEVSY_REPO": "owner/repo"
         }
-        
+
         with patch.dict(os.environ, env_vars, clear=True):
             with pytest.raises(SystemExit) as exc_info:
                 main()

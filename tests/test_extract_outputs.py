@@ -2,16 +2,17 @@
 
 import json
 import os
-import pytest
 from pathlib import Path
-from unittest.mock import patch, mock_open, MagicMock
+from unittest.mock import MagicMock, mock_open, patch
+
+import pytest
 from src.extract_outputs import (
-    extract_github_urls,
-    extract_pr_numbers,
     extract_branch_names,
+    extract_github_urls,
     extract_plan_content,
+    extract_pr_numbers,
+    main,
     parse_execution_file,
-    main
 )
 
 
@@ -191,7 +192,7 @@ CREATE TABLE users (id INT, name VARCHAR(255));
         assert "Implementation Plan" in plan
         assert "CREATE TABLE" in plan
         assert "Next Steps" in plan
-    
+
     def test_extract_plan_from_delimiter_block(self):
         """Test extracting plan from delimiter block."""
         text = """
@@ -223,7 +224,7 @@ This plan provides a structured approach.
         # Should not include text outside the delimiter block
         assert "Here's the implementation plan:" not in plan
         assert "This plan provides a structured approach." not in plan
-    
+
     def test_extract_plan_without_delimiter_block(self):
         """Test fallback when no delimiter block is present."""
         text = """
@@ -247,19 +248,17 @@ This is a simple plan without markdown delimiters.
 
 class TestMainFunction:
     """Test main function with base64 encoding."""
-    
+
     @patch('builtins.open', new_callable=mock_open)
     @patch('src.extract_outputs.Path.exists')
     def test_plan_output_base64_encoding(self, mock_exists, mock_file):
         """Test that plan output is base64 encoded for shell safety."""
-        import json
-        import sys
         import base64
-        from src.extract_outputs import main
-        
+        import sys
+
         # Mock file exists
         mock_exists.return_value = True
-        
+
         # Create test execution data with plan output containing shell special characters
         execution_data = {
             "messages": [
@@ -278,26 +277,26 @@ class TestMainFunction:
                 }
             ]
         }
-        
+
         # Mock file read
         mock_file.return_value.read.return_value = json.dumps(execution_data)
-        
+
         # Test arguments
         test_args = ['extract_outputs.py', '--execution-file', 'test.json', '--mode', 'plan-gen']
-        
+
         with patch.object(sys, 'argv', test_args):
             with patch.dict(os.environ, {'GITHUB_OUTPUT': '/tmp/test_output'}):
                 main()
-        
+
         # Verify that base64 encoding was used
         write_calls = mock_file.return_value.write.call_args_list
         plan_output_call = [call for call in write_calls if 'plan_output=' in str(call)]
         assert len(plan_output_call) > 0
-        
+
         # Extract the plan_output value
         plan_output_line = str(plan_output_call[0])
         plan_output_value = plan_output_line.split('plan_output=')[1].split('\\n')[0].strip("'\"")
-        
+
         # Verify it's valid base64 and can be decoded
         try:
             decoded = base64.b64decode(plan_output_value).decode('utf-8')

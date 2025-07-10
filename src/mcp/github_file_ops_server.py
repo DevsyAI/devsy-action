@@ -1,6 +1,5 @@
 #!/usr/bin/env python3
-"""
-MCP Server for GitHub file operations.
+"""MCP Server for GitHub file operations.
 
 This server provides tools for committing and deleting files in GitHub repositories
 using the GitHub API directly. This approach can trigger GitHub checks when normal
@@ -8,19 +7,20 @@ git operations from actions might not.
 """
 
 import asyncio
-import os
-import sys
-import json
 import base64
+import json
+import os
 import subprocess
-from typing import List, Dict, Any, Optional
+import sys
 from datetime import datetime
+from typing import Any, Dict, List, Optional
+
 import requests
 
 try:
+    from mcp import types
     from mcp.server import Server
     from mcp.server.stdio import stdio_server
-    from mcp import types
     print("🔧 [DEBUG] ✅ MCP imports successful", file=sys.stderr)
 except ImportError as e:
     print(f"🔧 [DEBUG] ❌ MCP import failed: {e}", file=sys.stderr)
@@ -39,49 +39,49 @@ def make_github_request(
         "Authorization": f"Bearer {token}",
         "X-GitHub-Api-Version": "2022-11-28"
     }
-    
+
     response = requests.request(
         method=method,
         url=url,
         headers=headers,
         json=data if data else None
     )
-    
+
     if not response.ok:
         raise Exception(f"GitHub API error: {response.status_code} {response.text}")
-    
+
     return response.json() if response.text else {}
 
 
 def extract_local_commit_info(commit_ref: str = "HEAD") -> Dict[str, Any]:
     """Extract all details from a local commit."""
-    
+
     try:
         # Get commit message
         message = subprocess.run(
             ["git", "log", "-1", "--pretty=%B", commit_ref],
             capture_output=True, text=True, check=True, cwd=os.getcwd()
         ).stdout.strip()
-        
+
         # Get author info
         author_name = subprocess.run(
             ["git", "log", "-1", "--pretty=%an", commit_ref],
             capture_output=True, text=True, check=True, cwd=os.getcwd()
         ).stdout.strip()
-        
+
         author_email = subprocess.run(
             ["git", "log", "-1", "--pretty=%ae", commit_ref],
             capture_output=True, text=True, check=True, cwd=os.getcwd()
         ).stdout.strip()
-        
+
         # Get list of files changed in this commit
         changed_files_output = subprocess.run(
             ["git", "diff-tree", "--no-commit-id", "--name-only", "-r", commit_ref],
             capture_output=True, text=True, check=True, cwd=os.getcwd()
         ).stdout.strip()
-        
+
         changed_files = [f for f in changed_files_output.split('\n') if f.strip()]
-        
+
         return {
             "message": message,
             "author_name": author_name,
@@ -100,8 +100,7 @@ def push_changes_impl(
     github_token: Optional[str] = None,
     mode: Optional[str] = None
 ) -> Dict[str, Any]:
-    """
-    Recreate a local commit on GitHub via API.
+    """Recreate a local commit on GitHub via API.
     
     This tool reads a local commit (including files modified by pre-commit hooks)
     and recreates it on GitHub using the GitHub API, ensuring checks are triggered.
@@ -115,14 +114,15 @@ def push_changes_impl(
     
     Returns:
         Dictionary with commit details including SHA and URL
+
     """
-    
+
     # Use environment variables as defaults
     owner = owner or os.environ.get('REPO_OWNER')
     repo = repo or os.environ.get('REPO_NAME')
     github_token = github_token or os.environ.get('GITHUB_TOKEN')
     mode = mode or os.environ.get('DEVSY_MODE', 'pr-update')  # Default to pr-update for backward compatibility
-    
+
     # Get current branch from git if not specified, rather than relying on env vars
     if not branch:
         try:
@@ -133,25 +133,25 @@ def push_changes_impl(
             branch = current_branch or os.environ.get('BRANCH_NAME', 'main')
         except subprocess.CalledProcessError:
             branch = os.environ.get('BRANCH_NAME', 'main')
-    
+
     if not all([owner, repo, branch, github_token]):
         return {
             "success": False,
             "error": "Missing required parameters: owner, repo, branch, or github_token"
         }
-    
+
     base_url = f"https://api.github.com/repos/{owner}/{repo}"
-    
+
     try:
         # Extract local commit details
         commit_info = extract_local_commit_info(commit_ref)
-        
+
         if not commit_info["files"]:
             return {
                 "success": False,
                 "error": "No files changed in the specified commit"
             }
-        
+
         # Get base SHA and determine if branch exists based on mode
         if mode == "pr-gen":
             # pr-gen: Always creating new branches, use base branch as base
@@ -172,7 +172,7 @@ def push_changes_impl(
                 github_token
             )
             base_sha = ref_data["object"]["sha"]
-        
+
         # Get base tree
         base_commit = make_github_request(
             "GET",
@@ -180,7 +180,7 @@ def push_changes_impl(
             github_token
         )
         base_tree_sha = base_commit["tree"]["sha"]
-        
+
         # Create blobs for all files in the working directory that were changed
         tree_entries = []
         for file_path in commit_info["files"]:
@@ -195,7 +195,7 @@ def push_changes_impl(
                     with open(file_path, 'rb') as f:
                         content = base64.b64encode(f.read()).decode('utf-8')
                     encoding = "base64"
-                
+
                 # Create blob
                 blob_data = make_github_request(
                     "POST",
@@ -206,7 +206,7 @@ def push_changes_impl(
                         "encoding": encoding
                     }
                 )
-                
+
                 tree_entries.append({
                     "path": file_path,
                     "mode": "100644",  # Regular file
@@ -221,7 +221,7 @@ def push_changes_impl(
                     "type": "blob",
                     "sha": None  # Setting sha to null deletes the file
                 })
-        
+
         # Create tree
         tree_data = make_github_request(
             "POST",
@@ -233,7 +233,7 @@ def push_changes_impl(
             }
         )
         new_tree_sha = tree_data["sha"]
-        
+
         # Create commit with original message and author
         commit_data = make_github_request(
             "POST",
@@ -250,7 +250,7 @@ def push_changes_impl(
             }
         )
         new_commit_sha = commit_data["sha"]
-        
+
         # Update or create branch reference
         if branch_exists:
             # Update existing branch
@@ -274,7 +274,7 @@ def push_changes_impl(
                     "sha": new_commit_sha
                 }
             )
-        
+
         # Get original local commit SHA for reference
         try:
             original_sha = subprocess.run(
@@ -283,7 +283,7 @@ def push_changes_impl(
             ).stdout.strip()
         except subprocess.CalledProcessError:
             original_sha = "unknown"
-        
+
         # Update local git refs to match remote state so `gh pr create` works
         try:
             # Update the remote tracking branch reference
@@ -291,24 +291,24 @@ def push_changes_impl(
                 ["git", "update-ref", f"refs/remotes/origin/{branch}", new_commit_sha],
                 capture_output=True, text=True, check=True, cwd=os.getcwd()
             )
-            
+
             # Reset local branch to match the new commit SHA on GitHub
             # This ensures local and remote are in sync so gh pr create works
             subprocess.run(
                 ["git", "reset", "--hard", new_commit_sha],
                 capture_output=True, text=True, check=True, cwd=os.getcwd()
             )
-            
+
             # Set up branch tracking so git knows this branch exists on remote
             subprocess.run(
                 ["git", "branch", f"--set-upstream-to=origin/{branch}", branch],
                 capture_output=True, text=True, check=False, cwd=os.getcwd()  # Don't fail if already set
             )
-            
+
         except subprocess.CalledProcessError as e:
             # Don't fail the whole operation if git ref update fails
             print(f"⚠️ Warning: Failed to update local git refs: {e.stderr}", file=sys.stderr)
-        
+
         return {
             "success": True,
             "original_local_sha": original_sha,
@@ -317,7 +317,7 @@ def push_changes_impl(
             "message": f"Successfully recreated local commit with {len(commit_info['files'])} file(s)",
             "files_changed": commit_info["files"]
         }
-        
+
     except Exception as e:
         return {
             "success": False,
@@ -380,12 +380,12 @@ async def handle_call_tool(name: str, arguments: dict) -> list[types.TextContent
             result = push_changes_impl(**arguments)
         else:
             result = {"success": False, "error": f"Unknown tool: {name}"}
-        
+
         return [types.TextContent(
             type="text",
             text=json.dumps(result, indent=2)
         )]
-    
+
     except Exception as e:
         return [types.TextContent(
             type="text",
@@ -399,14 +399,14 @@ async def handle_call_tool(name: str, arguments: dict) -> list[types.TextContent
 async def main():
     """Run the MCP server."""
     print("🔧 [DEBUG] Starting MCP server main()", file=sys.stderr)
-    
+
     # Check environment variables
     env_vars = ['GITHUB_TOKEN', 'REPO_OWNER', 'REPO_NAME', 'BRANCH_NAME']
     for var in env_vars:
         value = os.environ.get(var)
         status = "✅" if value else "❌"
         print(f"🔧 [DEBUG] {status} {var}: {'SET' if value else 'MISSING'}", file=sys.stderr)
-    
+
     # Optional: set up uvloop for better performance
     try:
         import uvloop
@@ -415,7 +415,7 @@ async def main():
     except ImportError:
         # uvloop is optional, fall back to default event loop
         print("🔧 [DEBUG] ℹ️ uvloop not available, using default event loop", file=sys.stderr)
-    
+
     try:
         print("🔧 [DEBUG] Creating stdio_server...", file=sys.stderr)
         async with stdio_server() as (read_stream, write_stream):
@@ -439,7 +439,7 @@ if __name__ == "__main__":
     print(f"🔧 [DEBUG] Python executable: {sys.executable}", file=sys.stderr)
     print(f"🔧 [DEBUG] Working directory: {os.getcwd()}", file=sys.stderr)
     print(f"🔧 [DEBUG] Script path: {__file__}", file=sys.stderr)
-    
+
     # Test mode for debugging
     if len(sys.argv) > 1 and sys.argv[1] == "--test":
         print("🔧 [DEBUG] TEST MODE: Server imports and creation successful!", file=sys.stderr)
@@ -449,7 +449,7 @@ if __name__ == "__main__":
             print(f"🔧 [DEBUG] TEST MODE: {var} = {'SET' if value else 'MISSING'}", file=sys.stderr)
         print("🔧 [DEBUG] TEST MODE: Exiting successfully", file=sys.stderr)
         sys.exit(0)
-    
+
     try:
         print("🔧 [DEBUG] Calling asyncio.run(main())", file=sys.stderr)
         asyncio.run(main())
