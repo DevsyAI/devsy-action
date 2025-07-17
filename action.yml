@@ -53,10 +53,10 @@ inputs:
 
   # === Devsy Action Configuration ===
   mode:
-    description: "Action mode: pr-gen, pr-update, or plan-gen"
+    description: "Action mode: pr-gen, pr-update, pr-review, or plan-gen"
     required: true
   pr_number:
-    description: "PR number to update (for pr-update mode)"
+    description: "PR number to update (for pr-update mode) or review (for pr-review mode)"
     required: false
   prompt:
     description: "The prompt to send to Claude Code (required for pr-gen and plan-gen modes)"

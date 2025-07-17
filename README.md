@@ -6,9 +6,29 @@ A GitHub Action that leverages Claude Code to automatically generate pull reques
 
 - **PR Generation (`pr-gen`)**: Create pull requests from arbitrary prompts
 - **PR Updates (`pr-update`)**: Update existing PRs based on review feedback
+- **PR Review (`pr-review`)**: Automated code review with structured feedback posted as PR comments
 - **Plan Generation (`plan-gen`)**: Generate detailed implementation plans without making code changes
 - **Remote Triggering**: Designed for `workflow_dispatch` to be called programmatically
 - **Callback Support**: Optional webhook callback when execution completes
+
+### PR Review Mode
+
+The `pr-review` mode provides automated code review capabilities:
+
+- **Comprehensive Analysis**: Reviews code quality, security, performance, and best practices
+- **Structured Feedback**: Posts organized comments with clear categories and recommendations
+- **GitHub Integration**: Uses GitHub CLI to post review comments directly to the PR
+- **Actionable Insights**: Provides specific suggestions for improvement with reasoning
+- **Professional Tone**: Maintains a constructive, educational approach to code review
+
+Example usage:
+```yaml
+- uses: DevsyAI/devsy-action@main
+  with:
+    mode: pr-review
+    pr_number: 123
+    anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+```
 
 ## Quick Setup 
 
@@ -103,7 +123,7 @@ Instead of Anthropic API key, you can use:
 
 ### Required Inputs
 
-- `mode`: Action mode - must be one of: `pr-gen`, `pr-update`, or `plan-gen`
+- `mode`: Action mode - must be one of: `pr-gen`, `pr-update`, `pr-review`, or `plan-gen`
 - `anthropic_api_key`: Your Anthropic API key (or use `use_bedrock`/`use_vertex` for cloud providers)
 
 ### Mode-Specific Inputs
@@ -114,6 +134,10 @@ Instead of Anthropic API key, you can use:
 **For `pr-update` mode:**
 - `pr_number`: The pull request number to update
 - `prompt`: Additional instructions for the update (optional)
+
+**For `pr-review` mode:**
+- `pr_number`: The pull request number to review
+- `prompt`: Additional review instructions (optional)
 
 **For `plan-gen` mode:**
 - `prompt`: The planning prompt
@@ -251,6 +275,7 @@ The action uses a two-layer prompt system for better control and consistency:
 2. **User Prompts** (mode-specific templates):
    - `pr-gen.md` - Detailed instructions for PR generation
    - `pr-update.md` - Structured approach for handling PR feedback
+   - `pr-review.md` - Automated code review with structured feedback
    - `plan-gen.md` - Comprehensive planning framework
 
 This separation ensures:
