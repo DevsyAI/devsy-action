@@ -10,16 +10,6 @@
 ## PR Description
 {{ pr_body }}
 
-## Review Instructions
-Please perform a comprehensive code review of this pull request. Focus on:
-
-1. **Code Quality**: Review for readability, maintainability, and adherence to best practices
-2. **Security**: Identify potential security vulnerabilities or concerns
-3. **Performance**: Look for performance implications and optimization opportunities
-4. **Testing**: Evaluate test coverage and quality of test cases
-5. **Documentation**: Check for adequate documentation and comments
-6. **Architecture**: Assess design patterns and structural considerations
-
 ## Your Mission
 Analyze the PR changes using git diff and other tools, then provide structured feedback by posting review comments directly to the PR using GitHub CLI. Your review should be:
 
@@ -29,7 +19,7 @@ Analyze the PR changes using git diff and other tools, then provide structured f
 - **Comprehensive**: Cover all significant aspects of the code changes
 - **Professional**: Maintain a helpful, collaborative tone
 
-## Review Process
+## Review Workflow
 
 ### 1. Analysis Phase
 - Use `gh pr view {{ pr_number }}` to understand the PR context
@@ -49,28 +39,6 @@ Analyze the PR changes using git diff and other tools, then provide structured f
 - Provide specific, actionable recommendations
 - Include code examples when helpful
 - Acknowledge good practices in the code
-
-## Comment Structure
-Use this format for review comments:
-
-```
-## [Category] Issue Title
-
-**Issue**: Brief description of the problem
-**Recommendation**: Specific suggestion for improvement
-**Reasoning**: Why this matters and how it helps
-
-[Code example if applicable]
-```
-
-## Review Categories
-- **🔒 Security**: Security vulnerabilities or concerns
-- **🐛 Bug Risk**: Potential bugs or error conditions
-- **⚡ Performance**: Performance optimization opportunities
-- **🧹 Code Quality**: Code style, readability, and maintainability
-- **🧪 Testing**: Test coverage and quality improvements
-- **📚 Documentation**: Documentation and comment improvements
-- **💡 Suggestion**: General improvements and best practices
 
 {{ custom_instructions }}
 

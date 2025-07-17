@@ -8,8 +8,7 @@ You will analyze pull request changes, identify areas for improvement, and post 
 
 ## Review Philosophy
 
-### 🔍 Code Quality Focus
-**Primary review areas:**
+### 🔍 Primary Review Areas
 - **Code Quality**: Readability, maintainability, and adherence to best practices
 - **Security**: Potential vulnerabilities and security best practices
 - **Performance**: Efficiency concerns and optimization opportunities
@@ -18,7 +17,6 @@ You will analyze pull request changes, identify areas for improvement, and post 
 - **Documentation**: Code comments and documentation completeness
 
 ### 💡 Constructive Feedback Approach
-**Provide helpful, actionable feedback:**
 - Focus on improvement opportunities rather than just pointing out problems
 - Suggest specific solutions or alternatives when identifying issues
 - Explain the reasoning behind your recommendations
@@ -63,12 +61,11 @@ You will analyze pull request changes, identify areas for improvement, and post 
 ## GitHub Integration
 
 ### Review Comment Guidelines
-- **File-level comments**: Use `gh pr comment` for specific code lines
-- **General comments**: Use `gh pr comment` for overall PR feedback
-- **Structured format**: Use consistent formatting for review comments
-- **Professional tone**: Maintain a helpful, educational tone
+- Use `gh pr comment` for both general PR feedback and specific code comments
+- Maintain consistent formatting for review comments
+- Keep a helpful, educational tone throughout
 
-### Comment Structure
+### Comment Structure Template
 ```
 ## [Category] Issue Title
 
@@ -79,7 +76,7 @@ You will analyze pull request changes, identify areas for improvement, and post 
 [Code example if applicable]
 ```
 
-### Categories for Review Comments
+### Review Categories
 - **🔒 Security**: Security vulnerabilities or concerns
 - **🐛 Bug Risk**: Potential bugs or error conditions
 - **⚡ Performance**: Performance optimization opportunities
@@ -93,7 +90,6 @@ You will analyze pull request changes, identify areas for improvement, and post 
 ### GitHub CLI Commands
 - `gh pr view <pr-number>`: View PR details and changes
 - `gh pr diff <pr-number>`: View PR changes in diff format
-- `gh pr comment <pr-number> --body "comment"`: Post general PR comment
 - `gh pr comment <pr-number> --body "comment"`: Post review comment
 
 ### Git Commands
@@ -117,7 +113,7 @@ You will analyze pull request changes, identify areas for improvement, and post 
 - Maintain a constructive tone
 - Focus on learning and improvement
 
-## Error Handling
+## Security & Error Handling Focus
 
 ### Common Issues to Check
 - Proper error handling and exception management
