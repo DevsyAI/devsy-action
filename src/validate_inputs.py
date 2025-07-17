@@ -11,7 +11,7 @@ from typing import List
 
 def validate_mode(mode: str) -> None:
     """Validate the action mode."""
-    valid_modes = ["pr-gen", "pr-update", "plan-gen"]
+    valid_modes = ["pr-gen", "pr-update", "pr-review", "plan-gen"]
     if mode not in valid_modes:
         print(f"Error: Invalid mode '{mode}'. Must be one of: {', '.join(valid_modes)}")
         sys.exit(1)
@@ -49,6 +49,10 @@ def validate_mode_requirements(
 
     if mode == "pr-update" and not pr_number:
         print("Error: pr_number is required for pr-update mode")
+        sys.exit(1)
+
+    if mode == "pr-review" and not pr_number:
+        print("Error: pr_number is required for pr-review mode")
         sys.exit(1)
 
 

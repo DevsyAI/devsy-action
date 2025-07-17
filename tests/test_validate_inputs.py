@@ -12,7 +12,7 @@ class TestValidateMode:
 
     def test_valid_modes(self):
         """Test that valid modes pass validation."""
-        valid_modes = ["pr-gen", "pr-update", "plan-gen"]
+        valid_modes = ["pr-gen", "pr-update", "pr-review", "plan-gen"]
         for mode in valid_modes:
             # Should not raise any exception
             validate_mode(mode)
@@ -89,6 +89,17 @@ class TestValidateModeRequirements:
         """Test pr-update mode without PR number."""
         with pytest.raises(SystemExit) as exc_info:
             validate_mode_requirements("pr-update", "", "", "")
+        assert exc_info.value.code == 1
+
+    def test_pr_review_with_pr_number(self):
+        """Test pr-review mode with PR number provided."""
+        # Should not raise any exception
+        validate_mode_requirements("pr-review", "", "", "123")
+
+    def test_pr_review_no_pr_number(self):
+        """Test pr-review mode without PR number."""
+        with pytest.raises(SystemExit) as exc_info:
+            validate_mode_requirements("pr-review", "", "", "")
         assert exc_info.value.code == 1
 
     def test_plan_gen_mode(self):
