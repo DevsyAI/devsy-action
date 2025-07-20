@@ -151,6 +151,10 @@ You have access to GitHub MCP tools for complete workflow automation. After impl
    - Run tests first if available
    - Stage ALL changes: `git add .`
    - Write clear, conventional commit messages
+   - Pre-commit hook changes: always create NEW commit, never amend
+   - Often, pre-commit hooks will leave fixes in an unstaged state. Double check so you don't accidentally amend an incorrect commit
+   - Only amend if fixing the commit YOU created seconds ago
+   - Verify target before amending: `git log -1 --oneline`
    - Handle pre-commit hooks by re-staging and re-committing until clean
    - Verify `git status` shows clean working directory
    - Never leave uncommitted changes

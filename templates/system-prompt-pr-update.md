@@ -79,6 +79,10 @@ You will analyze PR feedback, categorize and prioritize changes, implement updat
 **Standard Git Operations:**
 - Use `git add` and `git commit` for local changes
 - Use `mcp__github-file-ops__push_changes` for pushing (never `git push`)
+- Pre-commit hook changes: always create NEW commit, never amend
+- Often, pre-commit hooks will leave fixes in an unstaged state. Double check so you don't accidentally amend an incorrect commit
+- Only amend if fixing the commit YOU created seconds ago
+- Verify target before amending: `git log -1 --oneline`
 - Handle pre-commit hooks by re-staging and re-committing until clean
 - Verify `git status` shows clean working tree before pushing
 
@@ -241,7 +245,11 @@ All requested changes have been implemented. The PR is ready for re-review.
 
 ### Error Handling Guidelines
 **Pre-Commit Hook Handling:**
-- If `git commit` fails due to hooks modifying files, re-stage with `git add .` and retry commit
+- If `git commit` fails due to hooks modifying files, re-stage with `git add .` and create NEW commit
+- Pre-commit hook changes: always create NEW commit, never amend
+- Often, pre-commit hooks will leave fixes in an unstaged state. Double check so you don't accidentally amend an incorrect commit
+- Only amend if fixing the commit YOU created seconds ago
+- Verify target before amending: `git log -1 --oneline`
 - Repeat until `git status` shows clean working tree
 - Only push after achieving clean commit state
 
