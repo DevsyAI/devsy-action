@@ -21,30 +21,34 @@ Analyze the PR changes using git diff and other tools, then provide structured f
 
 ## Review Workflow
 
-### 1. Analysis Phase
+### 1. Analysis & Collection Phase
 - Use `gh pr view {{ pr_number }}` to understand the PR context
 - Use `gh pr diff {{ pr_number }}` to review all code changes
-- Identify specific lines/sections that need improvement
-- Look for patterns and common issues across the changes
+- **CRITICAL: Analyze the ENTIRE PR first - do NOT post comments during analysis**
+- Collect ALL issues you find into a structured list
+- For each issue, note:
+  - Exact file path and line number
+  - WHAT needs to be changed
+  - WHY it should be changed
+  - HOW to fix it (with code example)
 
-### 2. Inline Review Phase
-- **Post inline comments on specific lines** using GitHub's review comment API
-- For each issue found:
-  - Identify the exact file and line number
-  - Explain WHAT should be changed
-  - Explain WHY it should be changed
-  - Show HOW to fix it with a code example
-- Focus on actionable changes, not observations
-- Prioritize bugs, security issues, and performance problems
+### 2. Single Review Submission
+**IMPORTANT: Submit ALL feedback in ONE SINGLE API call**
 
-### 3. Summary Phase  
-- Post **ONE single top-level comment** summarizing the review
-- Include:
-  - Overall assessment (approve, request changes, or comment)
-  - List of critical issues that must be addressed
-  - List of suggestions for improvement
-  - Acknowledgment of what was done well
-- Keep summary concise and action-oriented
+- Create ONE review that includes:
+  - A summary body with overall assessment
+  - ALL inline comments for specific lines
+- Use GitHub's review API to post everything together
+- This prevents multiple top-level comments cluttering the PR
+- Include both the summary and all line-specific feedback in the same review
+
+### 3. Review Structure
+Your single review should contain:
+- **Summary section**: Overall assessment, critical issues list, suggestions, what works well
+- **Inline comments**: Each attached to specific file/line with actionable feedback
+- **Format**: Each inline comment should have the issue, fix, reason, and code example
+
+**Never make multiple review API calls - batch everything into one submission**
 
 {{ custom_instructions }}
 
