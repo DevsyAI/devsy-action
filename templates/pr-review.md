@@ -24,29 +24,35 @@ Analyze the PR changes using git diff and other tools, then provide structured f
 ### 1. Analysis Phase
 - Use `gh pr view {{ pr_number }}` to understand the PR context
 - Use `gh pr diff {{ pr_number }}` to review all code changes
-- Identify the scope and impact of modifications
+- Identify specific lines/sections that need improvement
 - Look for patterns and common issues across the changes
 
-### 2. Code Review Phase
-- Analyze each file for code quality, security, and performance
-- Check error handling and edge cases
-- Evaluate test coverage for new/modified functionality
-- Review documentation and comments
+### 2. Inline Review Phase
+- **Post inline comments on specific lines** using GitHub's review comment API
+- For each issue found:
+  - Identify the exact file and line number
+  - Explain WHAT should be changed
+  - Explain WHY it should be changed
+  - Show HOW to fix it with a code example
+- Focus on actionable changes, not observations
+- Prioritize bugs, security issues, and performance problems
 
-### 3. Feedback Phase
-- Post structured review comments using `gh pr comment {{ pr_number }} --body "..."`
-- Focus on critical and high-impact issues first
-- Provide specific, actionable recommendations
-- Include code examples when helpful
-- Acknowledge good practices in the code
+### 3. Summary Phase  
+- Post **ONE single top-level comment** summarizing the review
+- Include:
+  - Overall assessment (approve, request changes, or comment)
+  - List of critical issues that must be addressed
+  - List of suggestions for improvement
+  - Acknowledgment of what was done well
+- Keep summary concise and action-oriented
 
 {{ custom_instructions }}
 
 ## Success Criteria
-- ✅ Thoroughly analyzed all PR changes
-- ✅ Identified key areas for improvement
-- ✅ Posted structured, actionable feedback
+- ✅ Posted inline comments on specific lines with issues
+- ✅ Each comment includes: what to change, why, and how
+- ✅ Posted exactly ONE summary comment at the top level
+- ✅ Provided actionable feedback (not just observations)
+- ✅ Included code examples in suggestions
 - ✅ Maintained constructive, professional tone
-- ✅ Provided specific recommendations with reasoning
-- ✅ Acknowledged positive aspects of the code
-- ✅ Focused on security, quality, and maintainability
+- ✅ Focused on bugs, security, and performance first
