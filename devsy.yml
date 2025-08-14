@@ -12,19 +12,20 @@ on:
 
       # === Devsy Action Configuration ===
       mode:
-        description: 'Action mode: pr-gen, pr-update, or plan-gen'
+        description: 'Action mode: pr-gen, pr-update, pr-review, or plan-gen'
         required: true
         type: choice
         options:
           - pr-gen
           - pr-update
+          - pr-review
           - plan-gen
       pr_number:
-        description: 'PR number (required for pr-update mode)'
+        description: 'PR number (required for pr-update and pr-review modes)'
         required: false
         type: string
       prompt:
-        description: 'Prompt for Claude (required for pr-gen and plan-gen, optional for pr-update)'
+        description: 'Prompt for Claude (required for pr-gen and plan-gen, optional for pr-update and pr-review)'
         required: false
         type: string
 
