@@ -121,6 +121,24 @@ def prepare_plan_gen_prompt(user_prompt, custom_instructions, repo_name, base_br
     )
 
 
+def prepare_pr_review_prompt(pr_number, repo, token, custom_instructions):
+    """Prepare prompt for PR review mode."""
+    api_base = f"https://api.github.com/repos/{repo}"
+    pr_data = fetch_github_data(f"{api_base}/pulls/{pr_number}", token)
+
+    template = load_template("pr-review")
+    return render_template(
+        template,
+        repo_name=repo,
+        pr_number=pr_number,
+        pr_title=pr_data["title"],
+        pr_body=pr_data["body"] or "No description provided.",
+        base_branch=pr_data["base"]["ref"],
+        head_branch=pr_data["head"]["ref"],
+        custom_instructions=custom_instructions,
+    )
+
+
 def main():
     # Read all parameters from environment variables
     mode = os.environ.get("DEVSY_MODE", "")
@@ -182,6 +200,13 @@ def main():
             user_prompt_formatted = prepare_plan_gen_prompt(
                 user_prompt, custom_instructions, repo, base_branch
             )
+        elif mode == "pr-review":
+            user_prompt_formatted = prepare_pr_review_prompt(
+                pr_number, repo, github_token, custom_instructions
+            )
+        else:
+            print(f"Error: Unsupported mode '{mode}'")
+            sys.exit(1)
 
         # Output for GitHub Actions using JSON serialization for shell safety
         with open(os.environ.get("GITHUB_OUTPUT", "/dev/stdout"), "a") as f:

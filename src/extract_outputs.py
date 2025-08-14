@@ -108,7 +108,7 @@ def extract_plan_content(content):
 def main():
     parser = argparse.ArgumentParser(description="Extract outputs from Claude execution")
     parser.add_argument("--execution-file", required=True, help="Path to Claude's execution file")
-    parser.add_argument("--mode", required=True, choices=["pr-gen", "pr-update", "plan-gen"])
+    parser.add_argument("--mode", required=True, choices=["pr-gen", "pr-update", "pr-review", "plan-gen"])
 
     args = parser.parse_args()
 
@@ -125,6 +125,8 @@ def main():
             print(f"Error reading plan content: {e}", file=sys.stderr)
             outputs["plan_output"] = ""
     else:
+        # For pr-gen, pr-update, and pr-review modes, no specific plan output
+        # pr-review mode posts comments directly to PR, so no special extraction needed
         outputs["plan_output"] = ""
 
     # Output for GitHub Actions
