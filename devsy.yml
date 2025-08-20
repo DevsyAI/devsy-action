@@ -64,20 +64,20 @@ jobs:
           pr_number: ${{ inputs.pr_number }}
           prompt: ${{ inputs.prompt }}
           model: ${{ inputs.model }}
-          
+
           # === Setup Script ===
           # Uncomment if you have a setup script:
           # setup_script: '.devsy/setup.sh'
-          
+
           # === Tool Configuration ===
           # Uncomment and modify these based on your project needs:
-          allowed_tools: 'Bash(python:*)'
-          disallowed_tools: ''
-          
+          # allowed_tools: ''
+          # disallowed_tools: ''
+
           # === Callback Configuration ===
           callback_url: ${{ inputs.callback_url }}
           callback_auth_token: ${{ secrets.DEVSY_ORG_OAUTH_TOKEN }}
-          
+
           # === API Keys ===
           anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
           # Alternative AI providers (uncomment if using):
