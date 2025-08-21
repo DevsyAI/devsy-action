@@ -9,7 +9,11 @@ inputs:
   # === Claude Base Action Configuration ===
   anthropic_api_key:
     description: "Anthropic API key for Claude"
-    required: true
+    required: false
+  claude_code_oauth_token:
+    description: "Claude Code OAuth token (alternative to anthropic_api_key)"
+    required: false
+    default: ""
   model:
     description: "Claude model to use"
     required: false
@@ -137,6 +141,7 @@ runs:
       env:
         DEVSY_MODE: ${{ inputs.mode }}
         DEVSY_ANTHROPIC_API_KEY: ${{ inputs.anthropic_api_key }}
+        DEVSY_CLAUDE_CODE_OAUTH_TOKEN: ${{ inputs.claude_code_oauth_token }}
         DEVSY_USE_BEDROCK: ${{ inputs.use_bedrock }}
         DEVSY_USE_VERTEX: ${{ inputs.use_vertex }}
         DEVSY_PROMPT: ${{ inputs.prompt }}
@@ -269,6 +274,7 @@ runs:
         prompt: ${{ fromJSON(steps.prepare_prompt.outputs.user_prompt) }}
         system_prompt: ${{ fromJSON(steps.prepare_prompt.outputs.system_prompt) }}
         anthropic_api_key: ${{ inputs.anthropic_api_key }}
+        claude_code_oauth_token: ${{ inputs.claude_code_oauth_token }}
         model: ${{ inputs.model }}
         max_turns: ${{ inputs.max_turns }}
         timeout_minutes: ${{ inputs.timeout_minutes }}

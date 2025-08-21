@@ -18,21 +18,22 @@ def validate_mode(mode: str) -> None:
 
 
 def validate_authentication(
-    anthropic_api_key: str, use_bedrock: str, use_vertex: str
+    anthropic_api_key: str, claude_code_oauth_token: str, use_bedrock: str, use_vertex: str
 ) -> None:
     """Validate authentication configuration."""
-    if not anthropic_api_key and use_bedrock != "true" and use_vertex != "true":
+    if not anthropic_api_key and not claude_code_oauth_token and use_bedrock != "true" and use_vertex != "true":
         error_lines = [
             "Error: Authentication required. Please provide one of:",
             "  - anthropic_api_key: Set up ANTHROPIC_API_KEY in repository secrets",
+            "  - claude_code_oauth_token: Set up CLAUDE_CODE_OAUTH_TOKEN in repository secrets",
             "  - use_bedrock: true (with appropriate AWS credentials)",
             "  - use_vertex: true (with appropriate GCP credentials)",
             "",
-            "To set up ANTHROPIC_API_KEY:",
+            "To set up authentication:",
             "  1. Go to your repository Settings > Secrets and variables > Actions",
             "  2. Click 'New repository secret'",
-            "  3. Name: ANTHROPIC_API_KEY",
-            "  4. Value: Your Anthropic API key from console.anthropic.com",
+            "  3. For API key: Name: ANTHROPIC_API_KEY, Value: Your API key from console.anthropic.com",
+            "  4. For OAuth: Name: CLAUDE_CODE_OAUTH_TOKEN, Value: Your OAuth token from Claude Code",
         ]
         for line in error_lines:
             print(line)
@@ -61,6 +62,7 @@ def main() -> None:
     # Read all parameters from environment variables
     mode = os.environ.get("DEVSY_MODE", "")
     anthropic_api_key = os.environ.get("DEVSY_ANTHROPIC_API_KEY", "")
+    claude_code_oauth_token = os.environ.get("DEVSY_CLAUDE_CODE_OAUTH_TOKEN", "")
     use_bedrock = os.environ.get("DEVSY_USE_BEDROCK", "false")
     use_vertex = os.environ.get("DEVSY_USE_VERTEX", "false")
     prompt = os.environ.get("DEVSY_PROMPT", "")
@@ -74,7 +76,7 @@ def main() -> None:
 
     # Run all validations
     validate_mode(mode)
-    validate_authentication(anthropic_api_key, use_bedrock, use_vertex)
+    validate_authentication(anthropic_api_key, claude_code_oauth_token, use_bedrock, use_vertex)
     validate_mode_requirements(mode, prompt, prompt_file, pr_number)
 
     print("✅ All input validations passed")

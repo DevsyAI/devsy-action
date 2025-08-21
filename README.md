@@ -28,6 +28,7 @@ Example usage:
     mode: pr-review
     pr_number: 123
     anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+    # claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}  # Alternative to API key
 ```
 
 ## Quick Setup 
@@ -69,13 +70,23 @@ Enable GitHub Actions to create pull requests:
 
 #### Step 3: Add Your API Key
 
-Add your Anthropic API key to repository secrets:
+Add your Claude authentication to repository secrets (choose one):
 
+**Option 1: Anthropic API Key**
 1. **Get API Key**: Visit [console.anthropic.com](https://console.anthropic.com)
 2. **Add Secret**: Go to **Settings** → **Secrets and variables** → **Actions**
 3. **Create**: Click **"New repository secret"**
    - **Name**: `ANTHROPIC_API_KEY`
-   - **Value**: Your API key
+   - **Value**: Your API key from console.anthropic.com
+
+**Option 2: Claude Code OAuth Token (Recommended for Max Plan users)**
+1. **Get OAuth Token**: Run `claude auth` in Claude Code CLI to get your OAuth token
+2. **Add Secret**: Go to **Settings** → **Secrets and variables** → **Actions**  
+3. **Create**: Click **"New repository secret"**
+   - **Name**: `CLAUDE_CODE_OAUTH_TOKEN`
+   - **Value**: Your OAuth token from Claude Code CLI
+
+> OAuth tokens use flat pricing for Max Plan subscribers, while API keys use per-token billing.
 
 #### Step 4: Enable Callbacks
 
@@ -290,9 +301,9 @@ Templates use `{{ variable }}` syntax for variable substitution and can be custo
 ### "Authentication required" Error
 
 If you see an authentication error, ensure you have:
-- Added `ANTHROPIC_API_KEY` to your repository secrets
-- The secret name is exactly `ANTHROPIC_API_KEY` (case-sensitive)
-- Your API key is valid and has sufficient credits
+- Added `ANTHROPIC_API_KEY` or `CLAUDE_CODE_OAUTH_TOKEN` to your repository secrets
+- The secret name is exactly correct (case-sensitive)
+- Your credentials are valid and have sufficient credits/access
 - Or configured alternative authentication (Bedrock/Vertex)
 
 ### "No changes were made by Claude Code"
