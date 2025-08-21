@@ -36,28 +36,38 @@ class TestValidateAuthentication:
     def test_api_key_provided(self):
         """Test that API key authentication passes."""
         # Should not raise any exception
-        validate_authentication("sk-ant-123", "false", "false")
+        validate_authentication("sk-ant-123", "", "false", "false")
+
+    def test_oauth_token_provided(self):
+        """Test that OAuth token authentication passes."""
+        # Should not raise any exception
+        validate_authentication("", "oauth-token-123", "false", "false")
+
+    def test_both_tokens_provided(self):
+        """Test that both API key and OAuth token authentication passes."""
+        # Should not raise any exception
+        validate_authentication("sk-ant-123", "oauth-token-123", "false", "false")
 
     def test_bedrock_authentication(self):
         """Test that Bedrock authentication passes."""
         # Should not raise any exception
-        validate_authentication("", "true", "false")
+        validate_authentication("", "", "true", "false")
 
     def test_vertex_authentication(self):
         """Test that Vertex authentication passes."""
         # Should not raise any exception
-        validate_authentication("", "false", "true")
+        validate_authentication("", "", "false", "true")
 
     def test_no_authentication(self):
         """Test that no authentication raises SystemExit."""
         with pytest.raises(SystemExit) as exc_info:
-            validate_authentication("", "false", "false")
+            validate_authentication("", "", "false", "false")
         assert exc_info.value.code == 1
 
     def test_empty_api_key_string(self):
         """Test that empty string API key with no alternatives fails."""
         with pytest.raises(SystemExit) as exc_info:
-            validate_authentication("", "false", "false")
+            validate_authentication("", "", "false", "false")
         assert exc_info.value.code == 1
 
 
