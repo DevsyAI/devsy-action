@@ -275,7 +275,7 @@ runs:
 
     - name: Run Claude Code with git and gh tools
       id: run_claude
-      uses: anthropics/claude-code-base-action@main
+      uses: anthropics/claude-code-base-action@v0.0.63
       with:
         prompt: ${{ fromJSON(steps.prepare_prompt.outputs.user_prompt) }}
         settings: ${{ steps.prepare_tools.outputs.settings }}
