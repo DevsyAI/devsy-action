@@ -131,7 +131,9 @@ def generate_claude_args(mcp_config: str = None) -> str:
     
     # Add MCP config if specified
     if mcp_config and mcp_config.strip():
-        args.append(f"--mcp-config {mcp_config.strip()}")
+        # MCP config needs to be properly quoted as a single argument
+        # Use single quotes to wrap the JSON string
+        args.append(f"--mcp-config '{mcp_config.strip()}'")
     
     return "\n".join(args) if args else ""
 

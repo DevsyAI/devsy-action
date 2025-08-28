@@ -221,12 +221,18 @@ class TestGenerateClaudeArgs:
     def test_generate_claude_args_with_mcp_config(self):
         """Test generating claude_args with MCP config."""
         result = generate_claude_args(mcp_config="/tmp/mcp-config.json")
-        assert result == "--mcp-config /tmp/mcp-config.json"
+        assert result == "--mcp-config '/tmp/mcp-config.json'"
 
     def test_generate_claude_args_with_empty_mcp_config(self):
         """Test generating claude_args with empty MCP config."""
         result = generate_claude_args(mcp_config="")
         assert result == ""
+    
+    def test_generate_claude_args_with_json_mcp_config(self):
+        """Test generating claude_args with JSON MCP config."""
+        json_config = '{"mcpServers": {"example": {"command": "python", "args": ["server.py"]}}}'
+        result = generate_claude_args(mcp_config=json_config)
+        assert result == f"--mcp-config '{json_config}'"
 
 
 class TestMainFunction:
