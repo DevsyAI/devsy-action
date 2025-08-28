@@ -219,16 +219,6 @@ runs:
         # This enables pip to install private GitHub packages using the GitHub token
         git config --global url."https://github.com/".insteadOf git@github.com:
 
-    - name: Prepare tool configuration
-      id: prepare_tools
-      shell: bash
-      env:
-        DEVSY_MODE: ${{ inputs.mode }}
-      run: |
-        /tmp/devsy-action-env/bin/python ${{ github.action_path }}/src/prepare_tools.py \
-          --allowed-tools "${{ inputs.allowed_tools }}" \
-          --disallowed-tools "${{ inputs.disallowed_tools }}"
-
     - name: Checkout appropriate branch
       id: checkout_branch
       shell: bash
@@ -251,6 +241,22 @@ runs:
       run: |
         /tmp/devsy-action-env/bin/python ${{ github.action_path }}/src/prepare_mcp_config.py
 
+    - name: Prepare tool configuration
+      id: prepare_tools
+      shell: bash
+      env:
+        DEVSY_MODE: ${{ inputs.mode }}
+        DEVSY_MODEL: ${{ inputs.model }}
+        DEVSY_MAX_TURNS: ${{ inputs.max_turns }}
+        DEVSY_TIMEOUT_MINUTES: ${{ inputs.timeout_minutes }}
+        DEVSY_CLAUDE_ENV: ${{ inputs.claude_env }}
+        DEVSY_MCP_CONFIG: ${{ steps.prepare_mcp.outputs.mcp_config }}
+        DEVSY_SYSTEM_PROMPT: ${{ fromJSON(steps.prepare_prompt.outputs.system_prompt) }}
+      run: |
+        /tmp/devsy-action-env/bin/python ${{ github.action_path }}/src/prepare_tools.py \
+          --allowed-tools "${{ inputs.allowed_tools }}" \
+          --disallowed-tools "${{ inputs.disallowed_tools }}"
+
     - name: Run setup script
       if: inputs.setup_script != ''
       shell: bash
@@ -272,18 +278,12 @@ runs:
       uses: anthropics/claude-code-base-action@main
       with:
         prompt: ${{ fromJSON(steps.prepare_prompt.outputs.user_prompt) }}
-        system_prompt: ${{ fromJSON(steps.prepare_prompt.outputs.system_prompt) }}
+        settings: ${{ steps.prepare_tools.outputs.settings }}
+        claude_args: ${{ steps.prepare_tools.outputs.claude_args }}
         anthropic_api_key: ${{ inputs.anthropic_api_key }}
         claude_code_oauth_token: ${{ inputs.claude_code_oauth_token }}
-        model: ${{ inputs.model }}
-        max_turns: ${{ inputs.max_turns }}
-        timeout_minutes: ${{ inputs.timeout_minutes }}
-        allowed_tools: ${{ steps.prepare_tools.outputs.allowed_tools }}
-        disallowed_tools: ${{ steps.prepare_tools.outputs.disallowed_tools }}
         use_bedrock: ${{ inputs.use_bedrock }}
         use_vertex: ${{ inputs.use_vertex }}
-        claude_env: ${{ inputs.claude_env }}
-        mcp_config: ${{ steps.prepare_mcp.outputs.mcp_config }}
       env:
         # GitHub CLI authentication
         GITHUB_TOKEN: ${{ steps.token_exchange.outputs.github_token }}

@@ -7,6 +7,8 @@ from unittest.mock import mock_open, patch
 import pytest
 from src.prepare_tools import (
     combine_tools,
+    generate_claude_args,
+    generate_settings_json,
     get_base_tools,
     get_default_disallowed_tools,
     main,
@@ -155,12 +157,84 @@ class TestSetGithubOutput:
 # Main function integration tests removed - covered by manual testing
 
 
+class TestGenerateSettingsJson:
+    """Test generating settings JSON."""
+
+    def test_generate_settings_json_empty(self):
+        """Test generating settings JSON with no parameters."""
+        result = generate_settings_json("pr-gen", "", "")
+        assert result == ""
+
+    def test_generate_settings_json_with_model(self):
+        """Test generating settings JSON with model."""
+        result = generate_settings_json("pr-gen", "", "", model="claude-4")
+        expected = {"model": "claude-4"}
+        assert result == '{"model": "claude-4"}'
+
+    def test_generate_settings_json_with_tools(self):
+        """Test generating settings JSON with tools."""
+        result = generate_settings_json("pr-gen", "Edit,Read", "WebFetch,WebSearch")
+        import json
+        parsed = json.loads(result)
+        assert parsed["permissions"]["allow"] == ["Edit", "Read"]
+        assert parsed["permissions"]["deny"] == ["WebFetch", "WebSearch"]
+
+    def test_generate_settings_json_with_env(self):
+        """Test generating settings JSON with environment variables."""
+        result = generate_settings_json("pr-gen", "", "", claude_env="NODE_ENV=test,DEBUG=true")
+        import json
+        parsed = json.loads(result)
+        assert parsed["env"]["NODE_ENV"] == "test"
+        assert parsed["env"]["DEBUG"] == "true"
+
+    def test_generate_settings_json_with_all_params(self):
+        """Test generating settings JSON with all parameters."""
+        result = generate_settings_json(
+            mode="pr-gen",
+            allowed_tools="Edit,Read", 
+            disallowed_tools="WebFetch",
+            model="claude-4",
+            max_turns="100",
+            timeout_minutes="30",
+            claude_env="DEBUG=true",
+            system_prompt="You are helpful"
+        )
+        import json
+        parsed = json.loads(result)
+        assert parsed["model"] == "claude-4"
+        assert parsed["systemPrompt"] == "You are helpful"
+        assert parsed["maxTurns"] == 100
+        assert parsed["timeoutMinutes"] == 30
+        assert parsed["env"]["DEBUG"] == "true"
+        assert parsed["permissions"]["allow"] == ["Edit", "Read"]
+        assert parsed["permissions"]["deny"] == ["WebFetch"]
+
+
+class TestGenerateClaudeArgs:
+    """Test generating claude_args."""
+
+    def test_generate_claude_args_empty(self):
+        """Test generating claude_args with no parameters."""
+        result = generate_claude_args()
+        assert result == ""
+
+    def test_generate_claude_args_with_mcp_config(self):
+        """Test generating claude_args with MCP config."""
+        result = generate_claude_args(mcp_config="/tmp/mcp-config.json")
+        assert result == "--mcp-config /tmp/mcp-config.json"
+
+    def test_generate_claude_args_with_empty_mcp_config(self):
+        """Test generating claude_args with empty MCP config."""
+        result = generate_claude_args(mcp_config="")
+        assert result == ""
+
+
 class TestMainFunction:
     """Test main function integration."""
 
     @patch('src.prepare_tools.set_github_output')
-    def test_main_with_default_disallowed_tools(self, mock_set_output):
-        """Test that main function includes default disallowed tools."""
+    def test_main_with_default_tools(self, mock_set_output):
+        """Test that main function generates settings and claude_args outputs."""
         import sys
 
         test_args = ['prepare_tools.py']
@@ -168,12 +242,16 @@ class TestMainFunction:
         with patch.object(sys, 'argv', test_args):
             main()
 
-        # Check that set_github_output was called with default disallowed tools
+        # Check that set_github_output was called with settings and claude_args
         calls = mock_set_output.call_args_list
-        disallowed_call = [call for call in calls if call[0][0] == 'disallowed_tools'][0]
+        settings_call = [call for call in calls if call[0][0] == 'settings'][0]
+        claude_args_call = [call for call in calls if call[0][0] == 'claude_args'][0]
 
-        # Should contain WebFetch and WebSearch
-        assert disallowed_call[0][1] == "WebFetch,WebSearch"
+        # Settings should contain permissions with default disallowed tools
+        import json
+        settings = json.loads(settings_call[0][1])
+        assert "WebFetch" in settings["permissions"]["deny"]
+        assert "WebSearch" in settings["permissions"]["deny"]
 
     @patch('src.prepare_tools.set_github_output')
     def test_main_combines_user_disallowed_tools(self, mock_set_output):
@@ -185,12 +263,15 @@ class TestMainFunction:
         with patch.object(sys, 'argv', test_args):
             main()
 
-        # Check that set_github_output was called with combined disallowed tools
+        # Check that set_github_output was called with settings
         calls = mock_set_output.call_args_list
-        disallowed_call = [call for call in calls if call[0][0] == 'disallowed_tools'][0]
+        settings_call = [call for call in calls if call[0][0] == 'settings'][0]
 
         # Should contain default tools plus user tools
-        assert "WebFetch" in disallowed_call[0][1]
-        assert "WebSearch" in disallowed_call[0][1]
-        assert "CustomTool" in disallowed_call[0][1]
-        assert "AnotherTool" in disallowed_call[0][1]
+        import json
+        settings = json.loads(settings_call[0][1])
+        denied_tools = settings["permissions"]["deny"]
+        assert "WebFetch" in denied_tools
+        assert "WebSearch" in denied_tools
+        assert "CustomTool" in denied_tools
+        assert "AnotherTool" in denied_tools
